@@ -1,0 +1,1761 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="灯油配達管理">
+<title>灯油配達管理</title>
+<script>
+// iCloudドライブから開いた場合、ホーム画面追加を可能にするためにURLを正規化
+(function(){
+  if(location.protocol === 'file:' || location.href.indexOf('icloud') !== -1){
+    // LocalStorageのデータを保持したままSafariで正しく動作させる
+    document.addEventListener('DOMContentLoaded', function(){
+      // タップイベントを正常化
+      document.addEventListener('touchstart', function(){}, {passive:true});
+    });
+  }
+})();
+</script>
+<style>
+/* システムフォント使用（Google Fonts不要・オフライン対応） */
+:root {
+  --bg:#f8fafc; --s1:#ffffff; --s2:#f1f5f9; --s3:#e2e8f0;
+  --border:#cbd5e1; --border2:#94a3b8;
+  --orange:#ea6a00; --orange2:#c45a00;
+  --blue:#2563d4; --blue2:#1d4fb8;
+  --green:#16a34a; --red:#dc2626; --yellow:#ca8a04;
+  --cyan:#0891b2; --purple:#7c3aed;
+  --text:#1e293b; --muted:#64748b; --muted2:#475569;
+  --header-col:120px;
+  --cell-w:70px;
+  --row-h:38px;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;
+  background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;overflow-x:hidden;
+  -webkit-text-size-adjust:100%;
+}
+
+/* ══ TOPBAR ══ */
+.topbar{
+  background:var(--s1);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;padding:9px 16px;
+  position:sticky;top:0;z-index:200;flex-wrap:wrap;
+}
+.logo{font-family:'Courier New',Courier,monospace;font-size:14px;font-weight:700;color:var(--orange);letter-spacing:.05em;white-space:nowrap;}
+.logo span{color:var(--muted);font-weight:400;}
+.sep{flex:1;}
+input.search{
+  background:var(--s2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:inherit;font-size:12px;padding:5px 10px;width:150px;
+}
+input.search:focus{outline:none;border-color:var(--orange);}
+
+/* ══ BUTTONS ══ */
+.btn{
+  display:inline-flex;align-items:center;gap:5px;
+  padding:5px 12px;border-radius:6px;border:1px solid var(--border);
+  background:var(--s2);color:var(--text);cursor:pointer;
+  font-size:12px;font-family:inherit;transition:all .15s;white-space:nowrap;
+}
+.btn:hover{background:var(--s3);}
+.btn.accent{background:var(--orange);border-color:var(--orange);color:#fff;}
+.btn.accent:hover{background:var(--orange2);}
+.btn.blue{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.blue:hover{background:var(--blue2);}
+.btn.green{background:var(--green);border-color:var(--green);color:#000;}
+.btn.red{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red);}
+.btn.red:hover{background:rgba(239,68,68,.3);}
+.btn.sm{padding:3px 8px;font-size:11px;}
+
+/* ══ STOCK PANEL ══ */
+.stockbar{
+  background:var(--s1);border-bottom:2px solid var(--orange);
+  padding:8px 16px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+}
+.stockbar .title{font-size:11px;color:var(--muted);white-space:nowrap;}
+.stock-group{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.scard{
+  background:var(--s2);border:1px solid var(--border);border-radius:8px;
+  padding:6px 12px;display:flex;flex-direction:column;align-items:center;gap:1px;min-width:90px;
+}
+.scard .lbl{font-size:10px;color:var(--muted);}
+.scard .val{font-family:'Courier New',Courier,monospace;font-size:20px;font-weight:700;}
+.scard .unit{font-size:10px;color:var(--muted);}
+.scard.orange .val{color:var(--orange);}
+.scard.green .val{color:var(--green);}
+.scard.red .val{color:var(--red);}
+.scard.blue .val{color:var(--blue);}
+.scard.yellow .val{color:var(--yellow);}
+
+.op-btn{
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  background:var(--s2);border:1px solid var(--border);border-radius:8px;
+  padding:6px 10px;cursor:pointer;transition:all .15s;font-size:11px;color:var(--muted);
+  min-width:72px;
+}
+.op-btn:hover{border-color:var(--orange);color:var(--orange);}
+.op-btn .icon{font-size:18px;}
+
+/* ══ TABS ══ */
+.tabs{
+  display:flex;gap:2px;padding:10px 16px 0;
+  border-bottom:1px solid var(--border);background:var(--s1);
+}
+.tab{
+  padding:6px 16px;border-radius:6px 6px 0 0;cursor:pointer;
+  font-size:12px;color:var(--muted);border:1px solid transparent;
+  border-bottom:none;transition:all .15s;
+  background:none;font-family:inherit;
+  -webkit-appearance:none;
+}
+.tab.active{background:var(--bg);color:var(--text);border-color:var(--border);}
+.tab:hover:not(.active){color:var(--text);}
+
+/* ══ WEEK NAV ══ */
+.weeknav{
+  display:flex;align-items:center;gap:10px;padding:10px 16px;
+  background:var(--bg);flex-wrap:wrap;
+}
+.weeknav .wlabel{
+  font-family:'Courier New',Courier,monospace;font-size:13px;min-width:220px;text-align:center;
+}
+select.wsel{
+  background:var(--s2);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:inherit;font-size:12px;padding:5px 10px;
+}
+
+/* ══ TABLE ══ */
+.twrap{overflow-x:auto;padding:0 16px 24px;}
+table.main{border-collapse:separate;border-spacing:0;min-width:100%;table-layout:fixed;}
+table.main th,table.main td{border-right:1px solid var(--border);border-bottom:1px solid var(--border);}
+table.main thead tr:first-child th{border-top:1px solid var(--border);}
+table.main th:first-child,table.main td:first-child{border-left:1px solid var(--border);}
+
+/* sticky name col */
+table.main th.cname,table.main td.cname{
+  position:sticky;left:0;z-index:10;
+  width:var(--header-col);min-width:var(--header-col);
+  background:#ffffff;
+}
+table.main th.cname{z-index:20;background:#f1f5f9;}
+
+th.dhdr{
+  width:var(--cell-w);min-width:var(--cell-w);text-align:center;
+  padding:5px 3px;background:var(--s2);font-weight:500;font-size:10px;color:var(--muted);
+}
+th.dhdr .dn{display:block;font-family:'Courier New',Courier,monospace;font-size:14px;font-weight:700;color:var(--text);}
+/* 当日：オレンジ強調背景 */
+th.dhdr.today{background:#ffedd5;border-bottom:3px solid #f97316;}
+th.dhdr.today .dn{color:#c45a00;font-size:17px;}
+/* 祝日：薄赤背景、赤文字 */
+th.dhdr.holiday{background:#fff0f0;}
+th.dhdr.holiday .dn{color:#dc2626;}
+/* 当日かつ祝日 */
+th.dhdr.today.holiday{background:#ffe4e1;}
+/* 当日列の背景 */
+td.cell.today-cell{background:#fff3e0 !important;}
+td.cell.holiday-cell{background:#fff5f5 !important;}
+td.cell.today-cell.holiday-cell{background:#ffe8e0 !important;}
+
+/* 配達済みセル：オレンジ強調 */
+.ci.done{
+  background:#fff0d6;
+  color:#b84f00;
+  border:2px solid #f97316;
+  font-weight:800;
+  font-size:13px;
+  border-radius:6px;
+  box-shadow:0 1px 4px rgba(249,115,22,.25);
+}
+/* タンクローリー配達済み */
+.ci.tanker{
+  background:#d0f0fb;
+  color:#0369a1;
+  border:2px solid #0891b2;
+  font-weight:800;
+  font-size:13px;
+  border-radius:6px;
+  box-shadow:0 1px 4px rgba(8,145,178,.2);
+}
+/* 次回配達予定：赤塗りつぶし強調 */
+.ci.auto-sched{
+  background:#fee2e2;
+  border:2px solid #dc2626;
+  border-radius:6px;
+  box-shadow:0 1px 6px rgba(220,38,38,.3);
+}
+.ci.sched{
+  background:#fecaca;
+  border:2px solid #ef4444;
+  border-radius:6px;
+}
+td.cname{
+  padding:0 8px;height:var(--row-h);font-size:11px;
+  overflow:hidden;text-overflow:ellipsis;cursor:default;
+}
+.cname-inner{display:flex;align-items:center;justify-content:space-between;gap:4px;}
+.cname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
+
+tr.subrow td{background:#f8fafc;}
+tr.subrow td.cname{background:#f1f5f9;padding-left:24px;font-size:11px;color:var(--muted2);border-left:3px solid var(--border2);}
+
+/* type badges */
+.typebadge{
+  display:inline-block;padding:2px 7px;border-radius:4px;
+  font-size:10px;font-family:'Courier New',Courier,monospace;white-space:nowrap;
+  font-weight:700;
+}
+.typebadge.boiler{background:#fff0e0;color:#b84f00;border:1px solid #f97316;}
+.typebadge.ff{background:#e8f0ff;color:#1d4fb8;border:1px solid #3b82f6;}
+.typebadge.poly{background:#e6f9ee;color:#15803d;border:1px solid #22c55e;}
+.typebadge.other{background:#f1f5f9;color:#334155;border:1px solid #64748b;}
+.ci.tanker-sched{background:rgba(8,145,178,.08);color:var(--cyan);border:1px dashed rgba(8,145,178,.4);}
+td.cell{
+  width:var(--cell-w);height:var(--row-h);text-align:center;
+  vertical-align:middle;padding:2px;cursor:pointer;position:relative;
+}
+td.cell:hover .ci{filter:brightness(.93);}
+
+.ci{
+  display:flex;align-items:center;justify-content:center;
+  width:100%;height:100%;border-radius:4px;
+  font-family:'Courier New',Courier,monospace;font-size:11px;font-weight:600;
+  transition:all .12s;
+}
+.ci.empty{color:transparent;}
+
+.ci.winter-off{background:rgba(124,58,237,.1);color:var(--purple);border:1px dashed rgba(124,58,237,.3);}
+
+/* total row */
+tr.trow td{background:var(--s2)!important;text-align:center;font-family:'Courier New',Courier,monospace;font-size:12px;font-weight:700;color:var(--green);padding:4px;}
+tr.trow td.cname{color:var(--muted);font-size:10px;text-align:left;font-family:'Noto Sans JP',sans-serif;font-weight:400;}
+
+/* ══ MODALS ══ */
+.overlay{
+  display:none;position:fixed;inset:0;
+  background:rgba(0,0,0,.72);z-index:300;
+  align-items:center;justify-content:center;
+}
+.overlay.open{display:flex;}
+.modal{
+  background:var(--s1);border:1px solid var(--border2);border-radius:14px;
+  width:460px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:24px;
+}
+.modal h2{font-size:14px;margin-bottom:16px;color:var(--orange);display:flex;align-items:center;gap:8px;}
+.frow{margin-bottom:12px;}
+.frow label{display:block;font-size:11px;color:var(--muted);margin-bottom:4px;}
+.frow input,.frow select,.frow textarea{
+  width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  color:var(--text);font-family:inherit;font-size:13px;padding:7px 10px;
+}
+.frow input:focus,.frow select:focus,.frow textarea:focus{outline:none;border-color:var(--orange);}
+.frow textarea{resize:vertical;min-height:60px;}
+.mactions{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;flex-wrap:wrap;}
+
+/* delivery log in modal */
+.dlog{background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden;}
+.dlog-hdr{padding:6px 12px;background:var(--s2);font-size:11px;color:var(--muted);display:flex;justify-content:space-between;align-items:center;}
+.dlog-body{padding:8px 12px;display:flex;flex-direction:column;gap:6px;max-height:160px;overflow-y:auto;}
+.dlog-item{display:flex;align-items:center;gap:8px;font-size:12px;}
+.dlog-item .dtime{font-family:'Courier New',Courier,monospace;font-size:10px;color:var(--muted);min-width:40px;}
+.dlog-item .dqty{font-family:'Courier New',Courier,monospace;font-weight:700;color:var(--orange);}
+.dlog-item .dnote{color:var(--muted2);font-size:11px;flex:1;}
+.dlog-item .ddel{cursor:pointer;color:var(--muted2);font-size:10px;padding:2px 5px;border-radius:3px;border:1px solid transparent;}
+.dlog-item .ddel:hover{border-color:var(--red);color:var(--red);}
+.dlog-add{display:flex;gap:6px;padding:8px 12px;border-top:1px solid var(--border);align-items:center;}
+.dlog-add input[type=number]{width:70px;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Courier New',Courier,monospace;font-size:14px;padding:4px 8px;text-align:center;}
+.dlog-add input[type=number]:focus{outline:none;border-color:var(--orange);}
+.dlog-add input[type=text]{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:5px;color:var(--text);font-size:12px;padding:4px 8px;}
+.dlog-add input[type=text]:focus{outline:none;border-color:var(--orange);}
+
+/* sched opts */
+.sopts{display:flex;gap:6px;flex-wrap:wrap;}
+.sopt{
+  display:flex;flex-direction:column;align-items:center;gap:2px;
+  padding:8px 12px;border:1px solid var(--border);border-radius:7px;
+  cursor:pointer;background:var(--s2);transition:all .13s;font-size:11px;color:var(--muted);
+}
+.sopt:hover,.sopt.sel{border-color:var(--blue);background:rgba(59,130,246,.15);color:var(--blue);}
+.sopt .sd{font-family:'Courier New',Courier,monospace;font-size:16px;font-weight:700;}
+
+/* ══ STOCK OP MODAL ══ */
+.optype-btns{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
+.optype-btn{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;
+  padding:10px;border:1px solid var(--border);border-radius:8px;
+  cursor:pointer;background:var(--s2);transition:all .13s;font-size:11px;
+}
+.optype-btn.sel{border-color:var(--orange);background:rgba(249,115,22,.15);color:var(--orange);}
+.optype-btn .oi{font-size:20px;}
+
+/* ══ SCHEDULE TAB ══ */
+#tab1{padding:16px;}
+#tab1 h3{font-size:13px;color:var(--muted);margin-bottom:12px;}
+
+/* ══ CUSTOMER EDITOR ══ */
+.ce-equip{display:flex;flex-direction:column;gap:6px;margin-top:6px;}
+.ce-eq-row{
+  display:flex;align-items:center;gap:8px;
+  background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:6px 10px;
+}
+.ce-eq-row select,.ce-eq-row input{
+  background:var(--s2);border:1px solid var(--border);border-radius:5px;
+  color:var(--text);font-family:inherit;font-size:12px;padding:4px 7px;
+}
+.ce-eq-row .rm{cursor:pointer;color:var(--muted);font-size:12px;padding:2px 6px;border-radius:3px;border:1px solid transparent;}
+.ce-eq-row .rm:hover{border-color:var(--red);color:var(--red);}
+
+/* ══ iPhone最適化 ══ */
+/* タップ時のハイライトを自然に */
+a, button, .btn, .tab, .op-btn, .sopt, .cell {
+  -webkit-tap-highlight-color: rgba(0,0,0,0.1);
+}
+/* ボタンを押しやすいサイズに */
+.btn { min-height: 36px; }
+.btn.sm { min-height: 30px; }
+
+/* スマホ画面での各パーツ調整 */
+@media (max-width: 480px) {
+  .topbar { padding: 8px 10px; gap: 6px; }
+  .logo { font-size: 13px; }
+  .btn { font-size: 11px; padding: 5px 8px; }
+  .tabs { padding: 8px 10px 0; gap: 2px; }
+  .tab { padding: 7px 10px; font-size: 11px; }
+  .weeknav { padding: 8px 10px; gap: 6px; flex-wrap: wrap; }
+  .wlabel { font-size: 12px; min-width: unset; }
+  .twrap { padding: 0 6px 16px; }
+  :root {
+    --header-col: 90px;
+    --cell-w: 62px;
+    --row-h: 40px;
+  }
+  /* セルを指で押しやすく */
+  td.cell { min-height: 40px; }
+  /* モーダルをフル幅に */
+  .modal { width: 96vw; max-width: 96vw; padding: 16px; }
+  /* 在庫タブのレイアウト調整 */
+  #tab1 { padding: 10px; }
+  /* 顧客管理タブ */
+  #tab2 { padding: 10px; }
+}
+
+/* ホーム画面追加時のステータスバー下のスペース確保 */
+@supports (padding-top: env(safe-area-inset-top)) {
+  .topbar {
+    padding-top: calc(8px + env(safe-area-inset-top));
+  }
+}
+
+.print-area{display:none;}
+@media print{
+  @page{size:A4 portrait;margin:12mm 10mm;}
+  body>*:not(.print-area){display:none!important;}
+  .print-area{display:block!important;font-family:'Noto Sans JP',sans-serif;color:#000;}
+
+  .p-header{text-align:center;margin-bottom:10px;border-bottom:3px solid #000;padding-bottom:8px;}
+  .p-header h1{font-size:18px;font-weight:700;margin-bottom:3px;}
+  .p-header .p-sub{font-size:11px;color:#444;}
+
+  .p-legend{display:flex;gap:16px;margin-bottom:10px;font-size:10px;align-items:center;}
+  .p-legend-item{display:flex;align-items:center;gap:4px;}
+  .p-legend-box{width:14px;height:14px;border-radius:3px;border:1px solid #999;}
+
+  .ptable{width:100%;border-collapse:collapse;table-layout:fixed;}
+  .ptable th{background:#1e293b;color:#fff;font-size:10px;font-weight:700;padding:5px 4px;text-align:center;border:1px solid #334155;}
+  .ptable th.th-name{text-align:left;padding-left:6px;width:90px;}
+  .ptable th.th-equip{width:52px;}
+  .ptable td{border:1px solid #cbd5e1;padding:4px 3px;font-size:11px;text-align:center;vertical-align:middle;}
+  .ptable td.td-name{text-align:left;padding-left:6px;font-weight:600;font-size:11px;}
+  .ptable td.td-equip{font-size:9px;text-align:center;}
+  .ptable tr:nth-child(even) td{background:#f8fafc;}
+
+  /* 配達済み：オレンジ */
+  .ptable td.pd{background:#fff0d6;font-weight:700;color:#b84f00;}
+  /* 次回予定：赤 */
+  .ptable td.ps{background:#fee2e2;font-weight:700;color:#dc2626;}
+  /* 空欄 */
+  .ptable td.pe{background:#fff;}
+
+  .p-footer{margin-top:10px;font-size:9px;color:#666;border-top:1px solid #ccc;padding-top:5px;display:flex;justify-content:space-between;}
+}
+</style>
+</head>
+<body>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div class="logo">🛢 灯油配達管理 <span>v2</span></div>
+  <div class="sep"></div>
+  <input class="search" id="searchBox" placeholder="🔍 顧客名検索" oninput="renderTable()">
+  <button class="btn blue" onclick="showPrint()">🖨 1週間の予定を印刷</button>
+  <button class="btn green" onclick="openExportModal()">💾 データ保存</button>
+</div>
+
+<!-- TABS -->
+<div class="tabs">
+<button class="tab active" onclick="switchTab(0)">📋 配達管理表</button>
+  <button class="tab" onclick="switchTab(1)">📦 本日の在庫状況</button>
+  <button class="tab" onclick="switchTab(2)">👥 顧客管理</button>
+</div>
+
+<!-- TAB0: TABLE -->
+<div id="tab0">
+  <div class="weeknav">
+    <button class="btn" onclick="monthOffset--;renderTable()">◀ 前月</button>
+    <div class="wlabel" id="wlabel"></div>
+    <button class="btn" onclick="monthOffset++;renderTable()">来月 ▶</button>
+    <select class="wsel" id="weekRange" onchange="renderTable()">
+      <option value="biz">平日のみ（土日祝除く）</option>
+      <option value="all">全日（土日含む）</option>
+    </select>
+    <button class="btn sm" onclick="monthOffset=0;renderTable()">今月</button>
+  </div>
+  <div class="twrap" id="twrap"></div>
+</div>
+
+<!-- TAB1: STOCK -->
+<div id="tab1" style="display:none;padding:16px 20px;">
+
+  <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+    <h2 style="font-size:15px;font-weight:700;color:var(--text);">📋 本日の在庫管理表</h2>
+    <span id="stockTabDate" style="font-size:12px;color:var(--muted);"></span>
+    <div class="sep"></div>
+    <button class="btn sm accent" onclick="saveStockSheet()">💾 保存</button>
+    <button class="btn sm" onclick="resetStockSheet()">🔄 リセット</button>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:12px;max-width:640px;">
+
+    <!-- ① 前残 -->
+    <div style="background:#fff;border:2px solid #334155;border-radius:8px;overflow:hidden;">
+      <div style="background:#334155;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;">① 前残（前日の残り）</div>
+      <div style="padding:12px 14px;display:flex;align-items:center;gap:10px;">
+        <input type="number" id="ssZanmai" min="0" placeholder="0"
+          style="width:90px;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:700;
+          text-align:center;border:2px solid #cbd5e1;border-radius:6px;padding:4px;color:#1e293b;"
+          oninput="calcStockSheet()">
+        <span style="font-size:14px;color:#64748b;">本</span>
+      </div>
+    </div>
+
+    <!-- ② 配達リスト -->
+    <div style="background:#fff;border:2px solid #dc2626;border-radius:8px;overflow:hidden;">
+      <div style="background:#dc2626;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;display:flex;justify-content:space-between;align-items:center;">
+        <span>② 配達リスト（前残から引く）</span>
+        <span id="ssDelivTotal" style="font-family:'Courier New',Courier,monospace;font-size:13px;">合計: 0本</span>
+      </div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+        <div id="ssDelivList" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <button class="btn sm" style="font-size:11px;align-self:flex-start;margin-top:2px;" onclick="addDelivRow()">＋ 配達を追加</button>
+      </div>
+      <div style="background:#fef2f2;border-top:2px solid #dc2626;padding:8px 14px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="font-size:12px;font-weight:700;color:#dc2626;">配達合計（－）</span>
+        <span id="ssDelivTotalBottom" style="font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:700;color:#dc2626;">0本</span>
+      </div>
+    </div>
+
+    <!-- ③ 給油所（仕入れ） -->
+    <div style="background:#fff;border:2px solid #b84f00;border-radius:8px;overflow:hidden;">
+      <div style="background:#b84f00;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;">③ 給油所（仕入れ・前残に足す）</div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:6px;">
+        <div id="ssKyuyuCells" style="display:flex;flex-direction:column;gap:6px;"></div>
+        <button class="btn sm" style="font-size:11px;align-self:flex-start;" onclick="addKyuyuRow()">＋ 行追加</button>
+        <div style="background:#fff7ed;border-radius:6px;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;margin-top:2px;">
+          <span style="font-size:12px;color:#b84f00;font-weight:700;">給油所合計（＋）</span>
+          <span id="ssKyuyuTotal" style="font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:700;color:#b84f00;">0本</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ④ 油庫（保管庫） -->
+    <div style="background:#fff;border:2px solid #1d4fb8;border-radius:8px;overflow:hidden;">
+      <div style="background:#1d4fb8;color:#fff;font-size:12px;font-weight:700;padding:7px 14px;">④ 油庫（保管庫）</div>
+      <div style="padding:10px 14px;display:flex;flex-direction:column;gap:8px;">
+        <div>
+          <div style="font-size:11px;color:#1d4fb8;font-weight:700;margin-bottom:5px;">もらった本数（＋）</div>
+          <div id="ssYukoCells" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <button class="btn sm" style="font-size:11px;margin-top:4px;align-self:flex-start;" onclick="addYukoRow()">＋ 行追加</button>
+        </div>
+        <div style="border-top:1px solid #e2e8f0;padding-top:8px;">
+          <div style="font-size:11px;color:#b84f00;font-weight:700;margin-bottom:5px;">あげた本数（－）</div>
+          <div id="ssYukoOutCells" style="display:flex;flex-direction:column;gap:6px;"></div>
+          <button class="btn sm" style="font-size:11px;margin-top:4px;" onclick="addYukoOutRow()">＋ 行追加</button>
+        </div>
+        <div style="background:#eff6ff;border-radius:6px;padding:7px 12px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:#1d4fb8;font-weight:700;">油庫収支（もらい－あげ）</span>
+          <span id="ssYukoTotal" style="font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:700;color:#1d4fb8;">0本</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ⑤ 夕方残 -->
+    <div style="background:#f0fdf4;border:3px solid #16a34a;border-radius:8px;padding:16px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:#14532d;margin-bottom:4px;">⑤ 夕方残</div>
+        <div style="font-size:10px;color:#64748b;line-height:1.7;">
+          前残 ＋ 給油所 ＋ 油庫もらい<br>－ 配達合計 － 油庫あげ
+        </div>
+      </div>
+      <div style="text-align:center;">
+        <div id="ssYugata" style="font-family:'Courier New',Courier,monospace;font-size:48px;font-weight:700;color:#16a34a;line-height:1;">0</div>
+        <div style="font-size:13px;color:#14532d;margin-top:2px;">本　<span style="font-size:11px;color:#16a34a;">（<span id="ssYugataL">0</span>L）</span></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- TAB2: CUSTOMERS -->
+<div id="tab2" style="display:none;padding:16px;">
+  <div style="display:flex;gap:8px;margin-bottom:12px;align-items:center;">
+    <h3 style="font-size:13px;color:var(--muted);">顧客一覧</h3>
+    <div class="sep"></div>
+    <button class="btn accent" onclick="openAddCustomer()">＋ 顧客追加</button>
+  </div>
+  <div id="custList"></div>
+</div>
+
+<!-- CELL MODAL -->
+<div class="overlay" id="cellModal">
+  <div class="modal">
+    <h2 id="cmTitle">🛢 配達記録</h2>
+
+    <!-- 配達モード切替 -->
+    <div style="display:flex;gap:0;margin-bottom:14px;border:1px solid var(--border);border-radius:8px;overflow:hidden;">
+      <button id="modeCanBtn"
+        style="flex:1;padding:8px;font-size:12px;font-family:inherit;border:none;cursor:pointer;
+               background:var(--orange);color:#fff;font-weight:700;transition:all .15s;"
+        onclick="setDeliveryMode('can')">🛢 18L缶（本数）</button>
+      <button id="modeTankBtn"
+        style="flex:1;padding:8px;font-size:12px;font-family:inherit;border:none;cursor:pointer;
+               background:var(--s3);color:var(--muted);transition:all .15s;"
+        onclick="setDeliveryMode('tank')">🚛 タンクローリー（L）</button>
+    </div>
+
+    <!-- タンクローリー注記 -->
+    <div id="cmTankNote" style="display:none;align-items:center;gap:8px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.3);border-radius:6px;padding:7px 12px;margin-bottom:12px;font-size:11px;color:var(--cyan);">
+      🚛 タンクローリーはL単位で記録します。在庫（18L缶）には影響しません。
+    </div>
+
+    <!-- 配達ログ -->
+    <div class="dlog">
+      <div class="dlog-hdr">
+        <span>配達ログ（複数回追加可）</span>
+        <span id="cmTotal" style="font-family:'Courier New',Courier,monospace;color:var(--orange);font-weight:700;"></span>
+      </div>
+      <div class="dlog-body" id="cmLog"></div>
+
+      <!-- 18L缶入力 -->
+      <div id="cmCanInput" class="dlog-add" style="flex-direction:column;gap:8px;padding:12px;">
+        <div style="font-size:11px;color:var(--muted);">本数を選択（18L缶）</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="cmCanBtns"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">その他：</span>
+          <input type="number" id="cmAddQty" value="" min="1" max="99" placeholder="本数"
+            style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:5px;
+            color:var(--text);font-family:'Courier New',Courier,monospace;font-size:15px;padding:4px 8px;text-align:center;">
+          <span id="cmQtyUnit" style="font-size:12px;color:var(--muted);">本</span>
+          <button class="btn sm accent" onclick="cmAddDelivery()">＋ 追加</button>
+        </div>
+      </div>
+
+      <!-- タンクローリー入力 -->
+      <div id="cmTankInput" class="dlog-add" style="display:none;flex-direction:column;gap:8px;padding:12px;">
+        <div style="font-size:11px;color:var(--muted);">補充量を選択（L単位）</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="cmTankBtns"></div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:11px;color:var(--muted);white-space:nowrap;">その他：</span>
+          <input type="number" id="cmAddQtyTank" value="" min="10" max="9999" step="10" placeholder="L数"
+            style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:5px;
+            color:var(--text);font-family:'Courier New',Courier,monospace;font-size:15px;padding:4px 8px;text-align:center;">
+          <span style="font-size:12px;color:var(--muted);">L</span>
+          <button class="btn sm blue" onclick="cmAddDelivery()">＋ 追加</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 次回配達予定日（手動設定） -->
+    <div class="frow" style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:12px;">
+      <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:8px;">📅 次回配達予定日</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <input type="date" id="cmNextDateInput"
+          style="background:#fff;border:1px solid #fca5a5;border-radius:6px;
+          color:#7f1d1d;font-family:inherit;font-size:13px;padding:5px 8px;flex:1;min-width:140px;">
+        <button class="btn sm" style="background:#dc2626;border-color:#dc2626;color:#fff;white-space:nowrap;"
+          onclick="cmSetNextDate()">予定をセット</button>
+        <button class="btn sm red" onclick="cmClearNextDate()" style="white-space:nowrap;">予定を削除</button>
+      </div>
+      <div id="cmNextSetMsg" style="display:none;margin-top:8px;font-size:11px;color:#15803d;"></div>
+    </div>
+
+    <!-- 予定チェック -->
+    <div class="frow" style="display:flex;align-items:center;gap:10px;">
+      <label style="margin:0;">このセルを「予定」として記録</label>
+      <input type="checkbox" id="cmScheduled" style="width:auto;transform:scale(1.3);">
+    </div>
+
+    <div class="mactions">
+      <button class="btn" onclick="closeCellModal()">閉じる</button>
+      <button class="btn red" onclick="clearCell()">この日の記録を削除</button>
+    </div>
+  </div>
+</div>
+
+<!-- STOCK OP MODAL -->
+<div class="overlay" id="stockModal">
+  <div class="modal">
+    <h2 id="soTitle">📦 在庫操作</h2>
+    <div class="frow">
+      <label>本数（18L缶）</label>
+      <input type="number" id="soQty" value="1" min="1" max="999">
+    </div>
+    <div class="frow">
+      <label>時刻</label>
+      <input type="time" id="soTime">
+    </div>
+    <div class="frow">
+      <label>メモ</label>
+      <input type="text" id="soNote" placeholder="任意">
+    </div>
+    <div class="mactions">
+      <button class="btn" onclick="closeStockModal()">キャンセル</button>
+      <button class="btn accent" onclick="saveStockOp()">記録</button>
+    </div>
+  </div>
+</div>
+
+<!-- STOCK LOG MODAL -->
+<div class="overlay" id="stockLogModal">
+  <div class="modal" style="width:520px;">
+    <h2>📋 本日の在庫ログ</h2>
+    <div id="slogBody" style="max-height:360px;overflow-y:auto;"></div>
+    <div class="mactions">
+      <button class="btn" onclick="closeStockLog()">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD / EDIT CUSTOMER MODAL -->
+<div class="overlay" id="custModal">
+  <div class="modal" style="width:500px;">
+    <h2 id="custModalTitle">👤 顧客追加</h2>
+    <div class="frow">
+      <label>顧客名</label>
+      <input type="text" id="custName" placeholder="例：山田 太郎">
+    </div>
+    <div class="frow">
+      <label>設備（複数登録可）</label>
+      <div class="ce-equip" id="custEquips"></div>
+      <button class="btn sm" style="margin-top:6px;" onclick="addEquipRow()">＋ 設備追加</button>
+    </div>
+    <div class="mactions">
+      <button class="btn" onclick="closeCustModal()">キャンセル</button>
+      <button class="btn red" id="custDelBtn" style="display:none;" onclick="deleteCustomer()">削除</button>
+      <button class="btn accent" onclick="saveCustomer()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- DELETE CONFIRM MODAL -->
+<div class="overlay" id="delConfirmModal">
+  <div class="modal" style="width:360px;text-align:center;">
+    <h2 style="justify-content:center;">⚠️ 顧客削除の確認</h2>
+    <p id="delConfirmMsg" style="font-size:13px;margin-bottom:8px;"></p>
+    <p style="font-size:11px;color:var(--muted);margin-bottom:20px;">配達記録・予定もすべて削除されます。</p>
+    <div style="display:flex;gap:10px;justify-content:center;">
+      <button class="btn" onclick="document.getElementById('delConfirmModal').classList.remove('open')">キャンセル</button>
+      <button class="btn red" style="font-weight:700;" onclick="execDeleteCustomer()">削除する</button>
+    </div>
+  </div>
+</div>
+
+<!-- EXPORT / IMPORT MODAL -->
+<div class="overlay" id="exportModal">
+  <div class="modal" style="width:480px;">
+    <h2>💾 データの保存・読み込み</h2>
+
+    <!-- エクスポート -->
+    <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;color:#14532d;margin-bottom:8px;">📤 データを保存する</div>
+      <p style="font-size:12px;color:#166534;margin-bottom:12px;">
+        顧客情報・配達記録・予定データをファイルに保存します。<br>パソコンの買い替えや引き継ぎのときに使えます。
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn green" style="font-size:13px;padding:8px 16px;" onclick="exportJSON()">
+          📁 バックアップファイルを保存<br><span style="font-size:10px;font-weight:400;">（推奨・全データ保存）</span>
+        </button>
+        <button class="btn" style="font-size:13px;padding:8px 16px;" onclick="exportCSV()">
+          📊 Excelで開けるCSVを保存<br><span style="font-size:10px;font-weight:400;">（配達記録の確認用）</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- インポート -->
+    <div style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:14px;">
+      <div style="font-size:13px;font-weight:700;color:#1e40af;margin-bottom:8px;">📥 データを読み込む</div>
+      <p style="font-size:12px;color:#1e3a8a;margin-bottom:10px;">
+        保存したバックアップファイルを選んで読み込みます。<br>
+        <span style="color:#dc2626;font-weight:600;">⚠ 現在のデータは上書きされます。</span>
+      </p>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label class="btn blue" style="cursor:pointer;font-size:13px;padding:8px 16px;">
+          📂 ファイルを選択して読み込む
+          <input type="file" id="importFile" accept=".json" style="display:none;" onchange="importJSON(event)">
+        </label>
+      </div>
+      <div id="importMsg" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:6px;"></div>
+    </div>
+
+    <div class="mactions">
+      <button class="btn" onclick="document.getElementById('exportModal').classList.remove('open')">閉じる</button>
+    </div>
+  </div>
+</div>
+
+<div class="print-area" id="printArea"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let S = loadState();
+let nextCid = S.customers.length ? Math.max(...S.customers.map(c=>c.id))+1 : 1;
+let weekOffset = 0; // 後方互換のため残す（未使用）
+let monthOffset = 0;
+
+// deliveries: key = "cid:equipKey:YYYY-MM-DD"
+// value = { logs:[{qty,note,time,id}], scheduled:bool }
+// stockOps: key = "YYYY-MM-DD", value = [{type:'buy'|'from_storage'|'to_storage', qty, note, time, id}]
+
+function defaultState(){
+  return {
+    customers:[
+      {id:1,name:'田中 一郎',  equips:[{key:'boiler',label:'ボイラー',interval:14}]},
+      {id:2,name:'佐藤 花子',  equips:[{key:'ff',label:'FF式',interval:10},{key:'poly',label:'ポリ容器',interval:7,winter:true}]},
+      {id:3,name:'鈴木 次郎',  equips:[{key:'poly',label:'ポリ容器',interval:7}]},
+      {id:4,name:'高橋 美咲',  equips:[{key:'boiler',label:'ボイラー',interval:21}]},
+      {id:5,name:'渡辺 健太',  equips:[{key:'ff',label:'FF式',interval:14}]},
+      {id:6,name:'伊藤 さくら',equips:[{key:'boiler',label:'ボイラー',interval:14},{key:'poly',label:'ポリ容器',interval:7,winter:true}]},
+      {id:7,name:'山本 浩二',  equips:[{key:'boiler',label:'ボイラー',interval:14}]},
+      {id:8,name:'中村 陽子',  equips:[{key:'ff',label:'FF式',interval:10}]},
+    ],
+    deliveries:{},
+    stockOps:{},
+  };
+}
+function loadState(){
+  try{ const s=JSON.parse(localStorage.getItem('kero_v3'));if(s&&s.customers)return s; }catch(e){}
+  return defaultState();
+}
+function save(){ localStorage.setItem('kero_v3',JSON.stringify(S)); }
+
+// ═══════════════════════════════════════════
+// DATE / HOLIDAY
+// ═══════════════════════════════════════════
+const HOLIDAYS=new Set([
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24','2025-03-20',
+  '2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-23','2025-10-13',
+  '2025-11-03','2025-11-24','2025-12-23',
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20',
+  '2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23','2026-12-23',
+]);
+const DAYNAMES=['月','火','水','木','金','土','日'];
+function ds(d){
+  const y=d.getFullYear();
+  const m=String(d.getMonth()+1).padStart(2,'0');
+  const day=String(d.getDate()).padStart(2,'0');
+  return y+'-'+m+'-'+day;
+}
+function pd(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
+function isWeekend(d){const dw=d.getDay();return dw===0||dw===6;}
+function isHoliday(d){return HOLIDAYS.has(ds(d));}
+function isBiz(d){return !isWeekend(d)&&!isHoliday(d);}
+function addBizDays(start,n){
+  let t=new Date(start);t.setDate(t.getDate()+n);
+  while(!isBiz(t))t.setDate(t.getDate()+1);
+  return t;
+}
+function getMonthDates(offset, mode){
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = today.getMonth() + offset;
+  const base = new Date(y, m, 1);
+  const year = base.getFullYear();
+  const mon  = base.getMonth();
+  const daysInMonth = new Date(year, mon+1, 0).getDate();
+  const all = Array.from({length: daysInMonth}, (_, i) => new Date(year, mon, i+1));
+  // 土日のみ除外、祝日は表示する
+  return mode === 'biz' ? all.filter(d => !isWeekend(d)) : all;
+}
+function nowTime(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
+
+// ═══════════════════════════════════════════
+// STOCK CALCULATIONS
+// ═══════════════════════════════════════════
+function todayStr(){return ds(new Date());}
+function calcStock(dateStr){
+  dateStr=dateStr||todayStr();
+  const ops=S.stockOps[dateStr]||[];
+  let buy=0,fromSt=0,toSt=0;
+  ops.forEach(o=>{
+    if(o.type==='buy')buy+=o.qty;
+    else if(o.type==='from_storage')fromSt+=o.qty;
+    else if(o.type==='to_storage')toSt+=o.qty;
+  });
+  // deliveries
+  let del=0;
+  S.customers.forEach(c=>{
+    c.equips.forEach(eq=>{
+      const key = c.id + ':' + eq.key + ':' + dateStr;
+      const rec = S.deliveries[key];
+      if(rec && !rec.scheduled) rec.logs.forEach(l => { if(!l.isTank) del += l.qty; });
+    });
+  });
+  return{buy,fromSt,toSt,del,remain:buy+fromSt-toSt-del};
+}
+function updateStockBar(){
+  // 在庫タブが表示中なら更新
+  if(document.getElementById('tab1').style.display !== 'none'){
+    renderStockTab();
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDER TABLE
+// ═══════════════════════════════════════════
+function renderTable(){
+  const mode = document.getElementById('weekRange').value; // 'biz' or 'all'
+  const dates = getMonthDates(monthOffset, mode);
+  const todStr = todayStr();
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
+
+  // 月ラベル
+  const base = dates[0] || new Date();
+  document.getElementById('wlabel').textContent =
+    `${base.getFullYear()}年 ${base.getMonth()+1}月（${dates.length}日間）`;
+
+  const customers = S.customers.filter(c =>
+    !search || c.name.toLowerCase().includes(search) || c.name.includes(search)
+  );
+
+  // 固定列幅 72px（横スクロールで全日表示）
+  const colW = 72;
+
+  // ヘッダー行：日付ごとに週区切り線を入れる
+  let html = `<table class="main"><thead><tr>
+    <th class="cname" style="background:var(--s2);padding:6px 8px;font-size:11px;color:var(--muted);min-width:var(--header-col);">顧客名 / 設備</th>`;
+
+  dates.forEach(d => {
+    const dstr = ds(d);
+    const isToday = dstr === todStr;
+    const isHol = isHoliday(d);
+    const dow = d.getDay();
+    const borderLeft = dow === 1 ? 'border-left:2px solid var(--border2);' : '';
+    html += `<th class="dhdr${isToday?' today':''}${isHol?' holiday':''}"
+      style="width:${colW}px;min-width:${colW}px;${borderLeft}">
+      <span class="dn">${d.getDate()}</span>${DAYNAMES[dow===0?6:dow-1]}${isHol?'<span style="font-size:8px;display:block;color:#dc2626;font-weight:700;">祝</span>':''}${isToday?'<span style="font-size:8px;display:block;color:#c45a00;font-weight:700;">今日</span>':''}
+    </th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  customers.forEach(c => {
+    c.equips.forEach((eq, ei) => {
+      const isFirst = ei === 0;
+      const isSubrow = !isFirst;
+      const badgeClass = eq.key==='boiler'?'boiler':eq.key==='ff'?'ff':eq.key==='tanker'?'tanker':eq.key==='other'?'other':'poly';
+      html += `<tr class="${isSubrow?'subrow':''}">
+        <td class="cname">
+          <div class="cname-inner">
+            <span class="cname-text">${isFirst ? c.name : ''}</span>
+            <span class="typebadge ${badgeClass}">
+              ${eq.label}
+            </span>
+          </div>
+        </td>`;
+      dates.forEach(d => {
+        const dstr = ds(d);
+        const isHol = isHoliday(d);
+        const isToday = dstr === todStr;
+        const dow = d.getDay();
+        const borderLeft = dow === 1 ? 'border-left:2px solid var(--border2);' : '';
+        const recKey = c.id + ':' + eq.key + ':' + dstr;
+        const rec = S.deliveries[recKey];
+        let ci = '';
+        if(rec){
+          const canTotal  = rec.logs.filter(l => !l.isTank).reduce((a,l) => a+l.qty, 0);
+          const tankTotal = rec.logs.filter(l =>  l.isTank).reduce((a,l) => a+l.qty, 0);
+          let dispVal = '';
+          if(canTotal  > 0) dispVal += canTotal + '本';
+          if(tankTotal > 0) dispVal += (dispVal ? '+' : '') + tankTotal + 'L';
+          const icon = tankTotal > 0 && canTotal === 0 ? '🚛' : '🛢';
+          const ciClass = tankTotal > 0 && canTotal === 0 ? 'tanker' : 'done';
+          if(rec.scheduled){
+            ci = '<div class="ci auto-sched" title="次回配達予定"></div>';
+          } else {
+            ci = '<div class="ci ' + ciClass + '" title="' + dispVal + '(' + rec.logs.length + '回)">' + dispVal + '</div>';
+          }
+        } else {
+          ci = '<div class="ci empty"></div>';
+        }
+        const cellClass = 'cell' + (isToday?' today-cell':'') + (isHol?' holiday-cell':'');
+        html += `<td class="${cellClass}" style="${borderLeft}"
+          onclick="openCell(${c.id},'${eq.key}','${dstr}')">
+          ${ci}
+        </td>`;
+      });
+      html += `</tr>`;
+    });
+  });
+
+  html += `</tbody></table>`;
+
+  document.getElementById('twrap').innerHTML = html;
+  updateStockBar();
+}
+
+// ═══════════════════════════════════════════
+// CELL MODAL
+// ═══════════════════════════════════════════
+let cellCtx=null;
+let cmSelectedNext=null;
+
+// 18L缶のクイック選択ボタン候補
+const CAN_QUICK = [1, 2, 3, 4, 5, 6, 8, 10];
+// タンクローリーのクイック選択ボタン候補（L）
+const TANK_QUICK = [100, 150, 200, 250, 300, 400, 500, 600];
+
+// 現在の入力モード: 'can'=18L缶  'tank'=タンクローリー
+let deliveryMode = 'can';
+
+function setDeliveryMode(mode){
+  deliveryMode = mode;
+  const isTank = (mode === 'tank');
+  // モード切替ボタンの色
+  const canBtn  = document.getElementById('modeCanBtn');
+  const tankBtn = document.getElementById('modeTankBtn');
+  canBtn.style.background  = isTank ? 'var(--s3)'    : 'var(--orange)';
+  canBtn.style.color       = isTank ? 'var(--muted)' : '#fff';
+  tankBtn.style.background = isTank ? 'var(--cyan)'  : 'var(--s3)';
+  tankBtn.style.color      = isTank ? '#000'         : 'var(--muted)';
+  // 入力エリア切替
+  document.getElementById('cmCanInput').style.display  = isTank ? 'none' : 'flex';
+  document.getElementById('cmTankInput').style.display = isTank ? 'flex' : 'none';
+  document.getElementById('cmTankNote').style.display  = isTank ? 'flex' : 'none';
+}
+
+function buildQuickBtns(containerId, values, unit, isTank){
+  const el = document.getElementById(containerId);
+  el.innerHTML = '';
+  values.forEach(v => {
+    const btn = document.createElement('button');
+    btn.className = 'btn ' + (isTank ? 'blue' : 'accent');
+    btn.style.cssText = 'min-width:52px;font-family:"Courier New",Courier,monospace;font-size:13px;font-weight:700;padding:6px 8px;';
+    btn.textContent = v + unit;
+    btn.onclick = () => cmAddFixed(v, isTank);
+    el.appendChild(btn);
+  });
+}
+
+// 暦日数で次回日を計算（土日含む、祝日も含む）
+function addCalendarDays(start, n){
+  const d = new Date(start);
+  d.setDate(d.getDate() + n);
+  return d;
+}
+
+// 直前の配達日を探す（同顧客・同設備、指定日より前）
+function findLastDeliveryDate(cid, equipKey, beforeDateStr){
+  const prefix = cid + ':' + equipKey + ':';
+  const keys = Object.keys(S.deliveries)
+    .filter(k => k.startsWith(prefix) && !S.deliveries[k].scheduled)
+    .map(k => k.slice(prefix.length))
+    .filter(d => d < beforeDateStr)
+    .sort();
+  return keys.length ? keys[keys.length - 1] : null;
+}
+
+// 配達記録後に次回予定を自動セット
+function autoScheduleNext(cid, equipKey, deliveredDateStr){
+  const lastDate = findLastDeliveryDate(cid, equipKey, deliveredDateStr);
+  let interval;
+  if(lastDate){
+    // 前回配達日から今回配達日までの暦日数（土日含む）
+    const diff = Math.round((pd(deliveredDateStr) - pd(lastDate)) / 86400000);
+    interval = diff > 0 ? diff : null;
+  }
+  // 間隔が取れなければ顧客設定の標準間隔を使う
+  if(!interval){
+    const c = S.customers.find(x => x.id === cid);
+    const eq = c ? c.equips.find(e => e.key === equipKey) : null;
+    interval = eq ? eq.interval : 14;
+  }
+  // 次回予定日（暦日で計算、土日含む）
+  const nextD = addCalendarDays(pd(deliveredDateStr), interval);
+  const nextStr = ds(nextD);
+  const sk = cid + ':' + equipKey + ':' + nextStr;
+  if(!S.deliveries[sk]){
+    S.deliveries[sk] = {logs:[{qty:1, isTank:false, time:'', id:Date.now()}], scheduled:true, autoInterval:interval};
+  }
+  return {nextStr, interval};
+}
+
+function cmAddFixed(qty, isTank){
+  if(!cellCtx) return;
+  const recKey = cellCtx.cid + ':' + cellCtx.equipKey + ':' + cellCtx.dateStr;
+  const rec = S.deliveries[recKey];
+  rec.logs.push({qty, isTank: !!isTank, time: nowTime(), id: Date.now()});
+  rec.scheduled = false;
+  document.getElementById('cmScheduled').checked = false;
+  save();
+  renderCmLog(rec);
+  updateStockBar();
+  renderTable();
+}
+
+function openCell(cid, equipKey, dateStr){
+  const c  = S.customers.find(x => x.id === cid);
+  const eq = c.equips.find(e => e.key === equipKey);
+  cellCtx = {cid, equipKey, dateStr};
+
+  document.getElementById('cmTitle').textContent = '🛢 ' + c.name + ' — ' + eq.label + ' — ' + dateStr;
+
+  setDeliveryMode('can');
+
+  buildQuickBtns('cmCanBtns',  CAN_QUICK,  '本', false);
+  buildQuickBtns('cmTankBtns', TANK_QUICK, 'L',  true);
+  document.getElementById('cmAddQty').value     = '';
+  document.getElementById('cmAddQtyTank').value = '';
+
+  const recKey = cid + ':' + equipKey + ':' + dateStr;
+  const rec = S.deliveries[recKey] || {logs:[], scheduled:false};
+  if(!S.deliveries[recKey]) S.deliveries[recKey] = rec;
+
+  document.getElementById('cmScheduled').checked = rec.scheduled;
+  renderCmLog(rec);
+
+  // 既存の次回予定があれば日付入力に表示
+  const prefix = cid + ':' + equipKey + ':';
+  const existingNext = Object.keys(S.deliveries)
+    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) > dateStr && S.deliveries[k].scheduled)
+    .sort()[0];
+  const dateInput = document.getElementById('cmNextDateInput');
+  const msg = document.getElementById('cmNextSetMsg');
+  msg.style.display = 'none';
+  dateInput.value = existingNext ? existingNext.slice(prefix.length) : '';
+
+  document.getElementById('cellModal').classList.add('open');
+}
+
+// 手動で次回予定日をセット
+function cmSetNextDate(){
+  if(!cellCtx) return;
+  const newDateStr = document.getElementById('cmNextDateInput').value;
+  if(!newDateStr){ alert('日付を選択してください'); return; }
+
+  const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
+
+  // 既存の次回予定を削除
+  Object.keys(S.deliveries)
+    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) > cellCtx.dateStr && S.deliveries[k].scheduled)
+    .forEach(k => delete S.deliveries[k]);
+
+  // 新しい予定をセット
+  S.deliveries[prefix + newDateStr] = {logs:[], scheduled:true};
+
+  save();
+  renderTable();
+
+  const d = pd(newDateStr);
+  const msg = document.getElementById('cmNextSetMsg');
+  msg.textContent = '✅ ' + (d.getMonth()+1) + '月' + d.getDate() + '日 に予定をセットしました';
+  msg.style.display = 'block';
+}
+
+// 次回予定を削除
+function cmClearNextDate(){
+  if(!cellCtx) return;
+  const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
+  Object.keys(S.deliveries)
+    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) > cellCtx.dateStr && S.deliveries[k].scheduled)
+    .forEach(k => delete S.deliveries[k]);
+  save();
+  renderTable();
+  document.getElementById('cmNextDateInput').value = '';
+  const msg = document.getElementById('cmNextSetMsg');
+  msg.textContent = '🗑 次回予定を削除しました';
+  msg.style.display = 'block';
+}
+
+function renderCmLog(rec){
+  const logEl = document.getElementById('cmLog');
+  if(!rec || !rec.logs.length){
+    logEl.innerHTML = '<div style="color:var(--muted);font-size:11px;padding:6px 0;">記録なし</div>';
+    document.getElementById('cmTotal').textContent = '';
+    return;
+  }
+  const canTotal  = rec.logs.filter(l => !l.isTank).reduce((a,l) => a + l.qty, 0);
+  const tankTotal = rec.logs.filter(l =>  l.isTank).reduce((a,l) => a + l.qty, 0);
+  let totalStr = '';
+  if(canTotal  > 0) totalStr += canTotal  + '本';
+  if(tankTotal > 0) totalStr += (totalStr ? ' ＋ ' : '') + tankTotal + 'L(🚛)';
+  document.getElementById('cmTotal').textContent = totalStr ? '合計 ' + totalStr : '';
+
+  logEl.innerHTML = rec.logs.map((l, i) =>
+    '<div class="dlog-item">' +
+      '<span class="dtime">' + (l.time||'--:--') + '</span>' +
+      '<span class="dqty" style="color:' + (l.isTank ? 'var(--cyan)' : 'var(--orange)') + '">' +
+        l.qty + (l.isTank ? 'L' : '本') +
+      '</span>' +
+      '<span class="ddel" onclick="cmRemoveLog(' + i + ')">✕</span>' +
+    '</div>'
+  ).join('');
+}
+
+function cmAddDelivery(){
+  if(!cellCtx) return;
+  const isTank = (deliveryMode === 'tank');
+  const inputId = isTank ? 'cmAddQtyTank' : 'cmAddQty';
+  const qty = parseInt(document.getElementById(inputId).value) || 0;
+  if(qty <= 0){
+    alert(isTank ? 'L数を入力してください' : '本数を入力してください');
+    return;
+  }
+  const recKey = cellCtx.cid + ':' + cellCtx.equipKey + ':' + cellCtx.dateStr;
+  const rec = S.deliveries[recKey];
+  rec.logs.push({qty, isTank, time: nowTime(), id: Date.now()});
+  rec.scheduled = false;
+  document.getElementById('cmScheduled').checked = false;
+  save();
+  renderCmLog(rec);
+  updateStockBar();
+  renderTable();
+  document.getElementById(inputId).value = '';
+}
+
+function cmRemoveLog(idx){
+  if(!cellCtx)return;
+  const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
+  S.deliveries[recKey].logs.splice(idx,1);
+  if(!S.deliveries[recKey].logs.length) delete S.deliveries[recKey];
+  save();
+  const rec=S.deliveries[recKey];
+  if(rec) renderCmLog(rec);
+  else{
+    document.getElementById('cmLog').innerHTML=`<div style="color:var(--muted);font-size:11px;padding:4px 0;">記録なし</div>`;
+    document.getElementById('cmTotal').textContent='';
+  }
+  updateStockBar();
+  renderTable();
+}
+
+function clearCell(){
+  if(!cellCtx)return;
+  const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
+  delete S.deliveries[recKey];
+  save();
+  closeCellModal();
+  renderTable();
+  updateStockBar();
+}
+
+function closeCellModal(){
+  if(cellCtx){
+    const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
+    if(S.deliveries[recKey]){
+      S.deliveries[recKey].scheduled=document.getElementById('cmScheduled').checked;
+    }
+    save();
+  }
+  cellCtx=null;
+  document.getElementById('cellModal').classList.remove('open');
+  renderTable();
+  updateStockBar();
+}
+
+// ═══════════════════════════════════════════
+// STOCK OPS
+// ═══════════════════════════════════════════
+let stockOpType=null;
+function openStockOp(title,type){
+  stockOpType=type;
+  document.getElementById('soTitle').textContent='📦 '+title;
+  document.getElementById('soQty').value=1;
+  document.getElementById('soTime').value=nowTime();
+  document.getElementById('soNote').value='';
+  document.getElementById('stockModal').classList.add('open');
+  document.getElementById('soQty').focus();
+}
+function closeStockModal(){document.getElementById('stockModal').classList.remove('open');}
+function saveStockOp(){
+  const qty=parseInt(document.getElementById('soQty').value)||0;
+  if(qty<=0)return;
+  const time=document.getElementById('soTime').value;
+  const note=document.getElementById('soNote').value.trim();
+  const date=todayStr();
+  if(!S.stockOps[date])S.stockOps[date]=[];
+  S.stockOps[date].push({type:stockOpType,qty,note,time,id:Date.now()});
+  save();
+  closeStockModal();
+  updateStockBar();
+}
+
+function openStockLog(){
+  const date=todayStr();
+  const ops=S.stockOps[date]||[];
+  const{buy,fromSt,toSt,del,remain}=calcStock();
+  const typeLabel={buy:'🚛 仕入',from_storage:'📤 保管庫から取出',to_storage:'📥 保管庫へ入庫'};
+  const typeColor={buy:'var(--orange)',from_storage:'var(--blue)',to_storage:'var(--yellow)'};
+  let html=`<table style="width:100%;border-collapse:collapse;font-size:12px;">
+    <thead><tr style="background:var(--s2);">
+      <th style="padding:5px 8px;border:1px solid var(--border);text-align:left;">時刻</th>
+      <th style="padding:5px 8px;border:1px solid var(--border);text-align:left;">種別</th>
+      <th style="padding:5px 8px;border:1px solid var(--border);">本数</th>
+      <th style="padding:5px 8px;border:1px solid var(--border);text-align:left;">メモ</th>
+      <th style="padding:5px 8px;border:1px solid var(--border);"></th>
+    </tr></thead><tbody>`;
+  if(!ops.length) html+=`<tr><td colspan="5" style="padding:12px;text-align:center;color:var(--muted);">記録なし</td></tr>`;
+  ops.forEach((op,i)=>{
+    html+=`<tr>
+      <td style="padding:5px 8px;border:1px solid var(--border);font-family:'Courier New',Courier,monospace;">${op.time||''}</td>
+      <td style="padding:5px 8px;border:1px solid var(--border);color:${typeColor[op.type]||'inherit'};">${typeLabel[op.type]||op.type}</td>
+      <td style="padding:5px 8px;border:1px solid var(--border);text-align:center;font-family:'Courier New',Courier,monospace;font-weight:700;">${op.qty}</td>
+      <td style="padding:5px 8px;border:1px solid var(--border);color:var(--muted2);">${op.note||''}</td>
+      <td style="padding:5px 8px;border:1px solid var(--border);"><button class="btn sm red" onclick="deleteStockOp('${date}',${i});renderStockLog();">削除</button></td>
+    </tr>`;
+  });
+  html+=`</tbody></table>
+  <div style="margin-top:12px;background:var(--s2);border-radius:8px;padding:12px;display:flex;gap:16px;flex-wrap:wrap;font-size:12px;">
+    <span>仕入: <b style="color:var(--orange);font-family:'Courier New',Courier,monospace;">${buy}本</b></span>
+    <span>配達: <b style="color:var(--red);font-family:'Courier New',Courier,monospace;">${del}本</b></span>
+    <span>保管庫→車: <b style="color:var(--blue);font-family:'Courier New',Courier,monospace;">${fromSt}本</b></span>
+    <span>車→保管庫: <b style="color:var(--yellow);font-family:'Courier New',Courier,monospace;">${toSt}本</b></span>
+    <span>車残り: <b style="color:var(--green);font-family:'Courier New',Courier,monospace;">${Math.max(0,remain)}本</b></span>
+  </div>`;
+  document.getElementById('slogBody').innerHTML=html;
+  document.getElementById('stockLogModal').classList.add('open');
+}
+function renderStockLog(){openStockLog();}
+function deleteStockOp(date,idx){
+  S.stockOps[date].splice(idx,1);
+  save();updateStockBar();
+}
+function closeStockLog(){document.getElementById('stockLogModal').classList.remove('open');}
+
+// ═══════════════════════════════════════════
+// SCHEDULE TAB
+// ═══════════════════════════════════════════
+
+// ═══════════════════════════════════════════
+// CUSTOMER MANAGEMENT
+// ═══════════════════════════════════════════
+let editingCid=null;
+const EQUIP_OPTIONS=[
+  {key:'boiler',label:'ボイラー'},
+  {key:'ff',label:'FF式ストーブ'},
+  {key:'poly',label:'ポリ容器'},
+  {key:'other',label:'その他'},
+];
+function isTanker(equipKey){return equipKey==='tanker';} // 後方互換のため残す
+
+function renderCustList(){
+  const el=document.getElementById('custList');
+  let html=`<table style="border-collapse:collapse;width:100%;font-size:12px;background:#fff;">
+    <thead><tr style="background:#f1f5f9;">
+      <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:left;color:#334155;">顧客名</th>
+      <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:left;color:#334155;">設備</th>
+      <th style="padding:7px 12px;border:1px solid #cbd5e1;color:#334155;"></th>
+    </tr></thead><tbody>`;
+  S.customers.forEach(c=>{
+    const eqs=c.equips.map(e=>`<span class="typebadge ${e.key==='boiler'?'boiler':e.key==='ff'?'ff':e.key==='other'?'other':'poly'}">${e.label}</span>`).join(' ');
+    html+=`<tr style="background:${S.customers.indexOf(c)%2===0?'#fff':'#f8fafc'};">
+      <td style="padding:7px 12px;border:1px solid #cbd5e1;color:#000;font-weight:500;">${c.name}</td>
+      <td style="padding:7px 12px;border:1px solid #cbd5e1;">${eqs}</td>
+      <td style="padding:7px 12px;border:1px solid #cbd5e1;"><button class="btn sm" onclick="openEditCustomer(${c.id})">編集</button></td>
+    </tr>`;
+  });
+  html+=`</tbody></table>`;
+  el.innerHTML=html;
+}
+
+function openAddCustomer(){
+  editingCid=null;
+  document.getElementById('custModalTitle').textContent='👤 顧客追加';
+  document.getElementById('custName').value='';
+  document.getElementById('custDelBtn').style.display='none';
+  document.getElementById('custEquips').innerHTML='';
+  addEquipRow();
+  document.getElementById('custModal').classList.add('open');
+  document.getElementById('custName').focus();
+}
+function openEditCustomer(cid){
+  const c=S.customers.find(x=>x.id===cid);
+  editingCid=cid;
+  document.getElementById('custModalTitle').textContent=`✏️ 顧客編集: ${c.name}`;
+  document.getElementById('custName').value=c.name;
+  document.getElementById('custDelBtn').style.display='';
+  const ce=document.getElementById('custEquips');ce.innerHTML='';
+  c.equips.forEach(eq=>addEquipRow(eq));
+  document.getElementById('custModal').classList.add('open');
+}
+function addEquipRow(eq){
+  const ce=document.getElementById('custEquips');
+  const row=document.createElement('div');
+  row.className='ce-eq-row';
+  row.innerHTML=`
+    <select class="eqtype">
+      ${EQUIP_OPTIONS.map(o=>`<option value="${o.key}" ${eq&&eq.key===o.key?'selected':''}>${o.label}</option>`).join('')}
+    </select>
+    <span class="rm" onclick="this.parentElement.remove()">✕</span>`;
+  ce.appendChild(row);
+}
+function saveCustomer(){
+  const name=document.getElementById('custName').value.trim();
+  if(!name){alert('顧客名を入力してください');return;}
+  const rows=document.querySelectorAll('#custEquips .ce-eq-row');
+  if(!rows.length){alert('設備を1つ以上追加してください');return;}
+  const equips=[];
+  rows.forEach(r=>{
+    const key=r.querySelector('.eqtype').value;
+    const label=EQUIP_OPTIONS.find(o=>o.key===key).label;
+    // 間隔は既存値を引き継ぐ（新規は14日）
+    const existingEquip = editingCid
+      ? (S.customers.find(x=>x.id===editingCid)?.equips.find(e=>e.key===key))
+      : null;
+    const interval = existingEquip ? existingEquip.interval : 14;
+    equips.push({key,label,interval});
+  });
+  if(editingCid){
+    const c=S.customers.find(x=>x.id===editingCid);
+    c.name=name;c.equips=equips;
+  } else {
+    S.customers.push({id:nextCid++,name,equips});
+  }
+  save();closeCustModal();renderTable();renderCustList();
+}
+function deleteCustomer(){
+  if(!editingCid)return;
+  const c=S.customers.find(x=>Number(x.id)===Number(editingCid));
+  if(!c)return;
+  document.getElementById('delConfirmMsg').textContent=`「${c.name}」を削除しますか？`;
+  document.getElementById('delConfirmModal').classList.add('open');
+}
+function execDeleteCustomer(){
+  if(!editingCid)return;
+  const delId=Number(editingCid);
+  S.customers=S.customers.filter(c=>Number(c.id)!==delId);
+  Object.keys(S.deliveries).forEach(k=>{
+    if(k.startsWith(delId+':')) delete S.deliveries[k];
+  });
+  editingCid=null;
+  save();
+  document.getElementById('delConfirmModal').classList.remove('open');
+  closeCustModal();
+  renderTable();
+  renderCustList();
+}
+function closeCustModal(){document.getElementById('custModal').classList.remove('open');}
+
+// ═══════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════
+function switchTab(n){
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===n));
+  document.getElementById('tab0').style.display=n===0?'':'none';
+  document.getElementById('tab1').style.display=n===1?'':'none';
+  document.getElementById('tab2').style.display=n===2?'':'none';
+  if(n===1) renderStockTab();
+  if(n===2) renderCustList();
+}
+
+function renderStockTab(){
+  const d = new Date();
+  const dateStr = todayStr();
+  document.getElementById('stockTabDate').textContent =
+    d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日（'+['日','月','火','水','木','金','土'][d.getDay()]+'）';
+
+  // 保存済みデータを復元
+  const saved = S.stockSheet && S.stockSheet[dateStr] ? S.stockSheet[dateStr] : {};
+
+  // 前残
+  document.getElementById('ssZanmai').value = saved.zanmai != null ? saved.zanmai : '';
+
+  // 油庫もらい行
+  const yukoData = saved.yukoIn || [null];
+  const yukoEl = document.getElementById('ssYukoCells');
+  yukoEl.innerHTML = '';
+  yukoData.forEach((v,i) => addYukoRowWith(v));
+
+  // 油庫あげ行
+  const yukoOutData = saved.yukoOut || [null];
+  const yukoOutEl = document.getElementById('ssYukoOutCells');
+  yukoOutEl.innerHTML = '';
+  yukoOutData.forEach((v,i) => addYukoOutRowWith(v));
+
+  // 給油所行
+  const kyuyuData = saved.kyuyu || [null];
+  const kyuyuEl = document.getElementById('ssKyuyuCells');
+  kyuyuEl.innerHTML = '';
+  kyuyuData.forEach((v,i) => addKyuyuRowWith(v));
+
+  // 配達リスト行を復元
+  const delivData = saved.delivRows || [];
+  document.getElementById('ssDelivList').innerHTML = '';
+  if(delivData.length){
+    delivData.forEach(r => addDelivRow(r.name, r.qty));
+  }
+
+  calcStockSheet();
+}
+
+// 数値入力行を生成するヘルパー
+function makeNumRow(containerId, onInput){
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:6px;';
+  const inp = document.createElement('input');
+  inp.type = 'number'; inp.min = '0'; inp.placeholder = '0';
+  inp.style.cssText = 'width:70px;font-family:"Courier New",Courier,monospace;font-size:16px;font-weight:700;text-align:center;border:1px solid #cbd5e1;border-radius:5px;padding:3px;color:#1e293b;';
+  inp.oninput = () => calcStockSheet();
+  const unit = document.createElement('span');
+  unit.textContent = '本';
+  unit.style.cssText = 'font-size:12px;color:#64748b;';
+  const del = document.createElement('span');
+  del.textContent = '✕';
+  del.style.cssText = 'cursor:pointer;color:#94a3b8;font-size:12px;padding:2px 5px;border-radius:3px;border:1px solid transparent;';
+  del.onmouseover = () => del.style.borderColor='#ef4444';
+  del.onmouseout  = () => del.style.borderColor='transparent';
+  del.onclick = () => { wrap.remove(); calcStockSheet(); };
+  wrap.appendChild(inp); wrap.appendChild(unit); wrap.appendChild(del);
+  document.getElementById(containerId).appendChild(wrap);
+  return inp;
+}
+
+function addYukoRow()    { makeNumRow('ssYukoCells');    calcStockSheet(); }
+function addYukoOutRow() { makeNumRow('ssYukoOutCells'); calcStockSheet(); }
+function addKyuyuRow()   { makeNumRow('ssKyuyuCells');   calcStockSheet(); }
+
+function addYukoRowWith(v)    { const inp=makeNumRow('ssYukoCells');    if(v!=null) inp.value=v; }
+function addYukoOutRowWith(v) { const inp=makeNumRow('ssYukoOutCells'); if(v!=null) inp.value=v; }
+function addKyuyuRowWith(v)   { const inp=makeNumRow('ssKyuyuCells');   if(v!=null) inp.value=v; }
+
+function getColSum(containerId){
+  return Array.from(document.querySelectorAll('#'+containerId+' input'))
+    .reduce((s,inp) => s + (parseInt(inp.value)||0), 0);
+}
+
+// 配達行を1行追加（名前入力＋本数入力）
+function addDelivRow(name, qty){
+  const container = document.getElementById('ssDelivList');
+  const wrap = document.createElement('div');
+  wrap.style.cssText = 'display:flex;align-items:center;gap:6px;';
+
+  const nameInp = document.createElement('input');
+  nameInp.type = 'text';
+  nameInp.placeholder = '顧客名';
+  nameInp.value = name || '';
+  nameInp.style.cssText = 'flex:1;border:1px solid #cbd5e1;border-radius:5px;padding:5px 8px;font-size:13px;color:#1e293b;';
+  nameInp.oninput = () => calcStockSheet();
+
+  const qtyInp = document.createElement('input');
+  qtyInp.type = 'number';
+  qtyInp.min = '0';
+  qtyInp.placeholder = '0';
+  qtyInp.value = qty != null ? qty : '';
+  qtyInp.style.cssText = 'width:64px;font-family:"Courier New",Courier,monospace;font-size:16px;font-weight:700;text-align:center;border:1px solid #cbd5e1;border-radius:5px;padding:4px;color:#1e293b;';
+  qtyInp.oninput = () => calcStockSheet();
+
+  const unit = document.createElement('span');
+  unit.textContent = '本';
+  unit.style.cssText = 'font-size:12px;color:#64748b;white-space:nowrap;';
+
+  const del = document.createElement('span');
+  del.textContent = '✕';
+  del.style.cssText = 'cursor:pointer;color:#94a3b8;font-size:12px;padding:2px 5px;border-radius:3px;border:1px solid transparent;';
+  del.onmouseover = () => del.style.borderColor = '#ef4444';
+  del.onmouseout  = () => del.style.borderColor = 'transparent';
+  del.onclick = () => { wrap.remove(); calcStockSheet(); };
+
+  wrap.appendChild(nameInp);
+  wrap.appendChild(qtyInp);
+  wrap.appendChild(unit);
+  wrap.appendChild(del);
+  container.appendChild(wrap);
+}
+
+function calcStockSheet(){
+  const zanmai  = parseInt(document.getElementById('ssZanmai').value) || 0;
+  const yukoIn  = getColSum('ssYukoCells');
+  const yukoOut = getColSum('ssYukoOutCells');
+  const kyuyu   = getColSum('ssKyuyuCells');
+
+  // 配達合計：配達リストのDOM入力から集計（独立）
+  const delTotal = Array.from(document.querySelectorAll('#ssDelivList input[type=number]'))
+    .reduce((s, inp) => s + (parseInt(inp.value) || 0), 0);
+
+  const yugata = zanmai + kyuyu + yukoIn - delTotal - yukoOut;
+
+  document.getElementById('ssYukoTotal').textContent       = (yukoIn - yukoOut) + '本';
+  document.getElementById('ssKyuyuTotal').textContent      = kyuyu + '本';
+  document.getElementById('ssDelivTotal').textContent      = '配達合計: ' + delTotal + '本';
+  document.getElementById('ssDelivTotalBottom').textContent = delTotal + '本';
+  document.getElementById('ssYugata').textContent          = Math.max(0, yugata);
+  document.getElementById('ssYugataL').textContent         = Math.max(0, yugata) * 18;
+}
+
+function saveStockSheet(){
+  const dateStr = todayStr();
+  if(!S.stockSheet) S.stockSheet = {};
+  // 配達リスト行を保存
+  const delivWraps = document.querySelectorAll('#ssDelivList > div');
+  const delivRows = Array.from(delivWraps).map(wrap => {
+    const inputs = wrap.querySelectorAll('input');
+    return { name: inputs[0].value.trim(), qty: parseInt(inputs[1].value) || 0 };
+  }).filter(r => r.name || r.qty > 0);
+
+  S.stockSheet[dateStr] = {
+    zanmai: parseInt(document.getElementById('ssZanmai').value)||0,
+    yukoIn:  Array.from(document.querySelectorAll('#ssYukoCells input')).map(i=>parseInt(i.value)||0),
+    yukoOut: Array.from(document.querySelectorAll('#ssYukoOutCells input')).map(i=>parseInt(i.value)||0),
+    kyuyu:   Array.from(document.querySelectorAll('#ssKyuyuCells input')).map(i=>parseInt(i.value)||0),
+    delivRows,
+  };
+  save();
+  const btn = event.target;
+  btn.textContent = '✅ 保存しました';
+  setTimeout(() => btn.textContent = '💾 保存', 1500);
+}
+
+function resetStockSheet(){
+  if(!window.confirm('本日のデータをリセットしますか？')) return;
+  const dateStr = todayStr();
+  if(S.stockSheet) delete S.stockSheet[dateStr];
+  save();
+  renderStockTab();
+}
+
+// ═══════════════════════════════════════════
+// PRINT
+// ═══════════════════════════════════════════
+function showPrint(){
+  // 現在表示中の月から、今週（monthOffset基準）の月〜金を取得
+  const today = new Date();
+  // 印刷対象週：配達管理表で見ている月の、今週または次週を選ぶ
+  // → 現在の weekOffset をそのまま使う（配達管理表と同じ週）
+  // まず今週の月曜を求める
+  const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+  const mon = new Date(today);
+  mon.setDate(today.getDate() - dow + monthOffset * 7);
+
+  // 月〜金（土日除く）の5日間
+  const weekDates = [];
+  for(let i = 0; i < 7; i++){
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    if(!isWeekend(d)) weekDates.push(d);
+  }
+  if(!weekDates.length){ alert('印刷する日付がありません'); return; }
+
+  const y = weekDates[0].getFullYear();
+  const m = weekDates[0].getMonth() + 1;
+  const d1 = weekDates[0].getDate();
+  const d2 = weekDates[weekDates.length-1].getDate();
+  const m2 = weekDates[weekDates.length-1].getMonth() + 1;
+  const dateRange = y + '年' + m + '月' + d1 + '日（月）〜' + (m2 !== m ? m2+'月' : '') + d2 + '日（金）';
+  const todStr = ds(today);
+
+  // 予定のある顧客・設備を抽出
+  const rows = [];
+  S.customers.forEach(c => {
+    c.equips.forEach(eq => {
+      const hasSomething = weekDates.some(d => S.deliveries[c.id+':'+eq.key+':'+ds(d)]);
+      if(hasSomething) rows.push({c, eq});
+    });
+  });
+
+  // ヘッダー列（日付）
+  const dayHeaders = weekDates.map(d => {
+    const dstr = ds(d);
+    const isToday = dstr === todStr;
+    const isHol = isHoliday(d);
+    const label = (d.getMonth()+1) + '/' + d.getDate() + '<br><span style="font-size:9px;">' + DAYNAMES[d.getDay()===0?6:d.getDay()-1] + (isHol?'・祝':'') + '</span>';
+    const bg = isToday ? 'background:#fff3e0;' : isHol ? 'background:#fff0f0;' : '';
+    return {dstr, label, bg, isToday, isHol};
+  });
+
+  let html = `
+  <div class="p-header">
+    <h1>🛢 灯油配達予定表</h1>
+    <div class="p-sub">${dateRange}　　印刷日：${y}年${m}月${today.getDate()}日</div>
+  </div>
+  <div class="p-legend">
+    <span style="font-weight:700;font-size:10px;">凡例：</span>
+    <div class="p-legend-item"><div class="p-legend-box" style="background:#ede9fe;border-color:#5b21b6;"></div>次回配達予定</div>
+    <div class="p-legend-item"><div class="p-legend-box" style="background:#fff0d6;border-color:#b84f00;"></div>配達済み</div>
+  </div>
+  <table class="ptable">
+    <thead><tr>
+      <th class="th-name">顧客名</th>
+      <th class="th-equip">設備</th>`;
+
+  dayHeaders.forEach(h => {
+    html += `<th style="${h.bg}">${h.label}</th>`;
+  });
+  html += `</tr></thead><tbody>`;
+
+  if(rows.length === 0){
+    html += `<tr><td colspan="${2 + weekDates.length}" style="text-align:center;padding:20px;color:#64748b;">この週の配達予定はありません</td></tr>`;
+  } else {
+    rows.forEach(({c, eq}) => {
+      const tk = isTanker(eq.key);
+      html += `<tr>
+        <td class="td-name">${c.name}</td>
+        <td class="td-equip">${eq.label}</td>`;
+      dayHeaders.forEach(h => {
+        const rec = S.deliveries[c.id+':'+eq.key+':'+h.dstr];
+        let cellBg = h.isToday ? 'background:#fffbf5;' : h.isHol ? 'background:#fff8f8;' : '';
+        if(rec){
+          if(rec.scheduled){
+            html += `<td class="ps" style="${cellBg}">予定</td>`;
+          } else {
+            const canT  = rec.logs.filter(l=>!l.isTank).reduce((a,l)=>a+l.qty,0);
+            const tankT = rec.logs.filter(l=> l.isTank).reduce((a,l)=>a+l.qty,0);
+            let val = '';
+            if(canT  > 0) val += canT  + '本';
+            if(tankT > 0) val += (val?'+':'') + tankT + 'L';
+            html += `<td class="pd" style="${cellBg}">${val}</td>`;
+          }
+        } else {
+          html += `<td class="pe" style="${cellBg}"></td>`;
+        }
+      });
+      html += `</tr>`;
+    });
+  }
+
+  html += `</tbody></table>
+  <div class="p-footer">
+    <span>■予定のある顧客のみ表示</span>
+    <span>灯油配達管理アプリより出力</span>
+  </div>`;
+
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
+}
+
+// ═══════════════════════════════════════════
+// EXPORT / IMPORT
+// ═══════════════════════════════════════════
+function openExportModal(){
+  document.getElementById('importMsg').style.display = 'none';
+  document.getElementById('importFile').value = '';
+  document.getElementById('exportModal').classList.add('open');
+}
+
+// JSONバックアップ（全データ）
+function exportJSON(){
+  const data = JSON.stringify(S, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const today = new Date();
+  const fname = '灯油配達管理_バックアップ_'
+    + today.getFullYear()
+    + String(today.getMonth()+1).padStart(2,'0')
+    + String(today.getDate()).padStart(2,'0')
+    + '.json';
+  a.href = url; a.download = fname;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// CSV（配達記録）Excelで開ける
+function exportCSV(){
+  const BOM = '\uFEFF'; // Excelで文字化けしないようにBOMを付ける
+  let csv = '顧客名,設備,日付,本数(缶),本数(L/タンクローリー),予定\n';
+  S.customers.forEach(c => {
+    c.equips.forEach(eq => {
+      Object.keys(S.deliveries)
+        .filter(k => k.startsWith(c.id+':'+eq.key+':'))
+        .sort()
+        .forEach(k => {
+          const dateStr = k.split(':')[2];
+          const rec = S.deliveries[k];
+          const canQty  = rec.logs.filter(l=>!l.isTank).reduce((a,l)=>a+l.qty,0);
+          const tankQty = rec.logs.filter(l=> l.isTank).reduce((a,l)=>a+l.qty,0);
+          const scheduled = rec.scheduled ? '予定' : '配達済';
+          csv += `"${c.name}","${eq.label}","${dateStr}",${canQty||''},${tankQty||''},"${scheduled}"\n`;
+        });
+    });
+  });
+  const blob = new Blob([BOM+csv], {type:'text/csv'});
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  const today = new Date();
+  const fname = '灯油配達記録_'
+    + today.getFullYear()
+    + String(today.getMonth()+1).padStart(2,'0')
+    + String(today.getDate()).padStart(2,'0')
+    + '.csv';
+  a.href = url; a.download = fname;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// JSONインポート（全データ復元）
+function importJSON(event){
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!data.customers || !data.deliveries){
+        throw new Error('形式が違います');
+      }
+      S = data;
+      nextCid = S.customers.length ? Math.max(...S.customers.map(c=>c.id))+1 : 1;
+      save();
+      renderTable();
+      renderCustList();
+      const msg = document.getElementById('importMsg');
+      msg.textContent = '✅ データを読み込みました。顧客数：' + S.customers.length + '件';
+      msg.style.cssText = 'display:block;background:#f0fdf4;color:#15803d;border:1px solid #86efac;border-radius:6px;padding:8px 12px;font-size:12px;margin-top:10px;';
+    } catch(err){
+      const msg = document.getElementById('importMsg');
+      msg.textContent = '❌ 読み込みに失敗しました。正しいバックアップファイルを選んでください。';
+      msg.style.cssText = 'display:block;background:#fef2f2;color:#dc2626;border:1px solid #fca5a5;border-radius:6px;padding:8px 12px;font-size:12px;margin-top:10px;';
+    }
+  };
+  reader.readAsText(file);
+}
+function init(){
+  updateStockBar();
+  renderTable();
+  // close overlays on backdrop click
+  ['cellModal','stockModal','stockLogModal','custModal','delConfirmModal','exportModal'].forEach(id=>{
+    document.getElementById(id).addEventListener('click',function(e){
+      if(e.target===this){
+        if(id==='cellModal')closeCellModal();
+        else if(id==='stockModal')closeStockModal();
+        else if(id==='stockLogModal')closeStockLog();
+        else if(id==='custModal')closeCustModal();
+        else this.classList.remove('open');
+      }
+    });
+  });
+  // Enter to add delivery in cell modal
+  document.getElementById('cmAddQty').addEventListener('keydown',e=>{if(e.key==='Enter')cmAddDelivery();});
+  document.getElementById('cmAddQtyTank').addEventListener('keydown',e=>{if(e.key==='Enter')cmAddDelivery();});
+  document.getElementById('soQty').addEventListener('keydown',e=>{if(e.key==='Enter')saveStockOp();});
+}
+init();
+</script>
+</body>
+</html>
