@@ -566,8 +566,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 
       <!-- タンクローリー入力 -->
       <div id="cmTankInput" class="dlog-add" style="display:none;flex-direction:column;gap:8px;padding:12px;">
-        <div style="font-size:11px;color:var(--muted);">補充量を選択（L単位）</div>
-        <div style="display:flex;gap:6px;flex-wrap:wrap;" id="cmTankBtns"></div>
+        <div style="font-size:11px;color:var(--muted);">L数を手動で入力してください</div>
         <div style="display:flex;align-items:center;gap:8px;">
           <span style="font-size:11px;color:var(--muted);white-space:nowrap;">その他：</span>
           <input type="number" id="cmAddQtyTank" value="" min="10" max="9999" step="10" placeholder="L数"
@@ -1030,7 +1029,6 @@ function openCell(cid, equipKey, dateStr){
   setDeliveryMode('can');
 
   buildQuickBtns('cmCanBtns',  CAN_QUICK,  '本', false);
-  buildQuickBtns('cmTankBtns', TANK_QUICK, 'L',  true);
   document.getElementById('cmAddQty').value     = '';
   document.getElementById('cmAddQtyTank').value = '';
 
