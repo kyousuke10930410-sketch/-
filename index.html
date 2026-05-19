@@ -647,6 +647,12 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
       <label>顧客名</label>
       <input type="text" id="custName" placeholder="例：山田 太郎">
     </div>
+    <div class="frow" id="insertPosRow">
+      <label>挿入位置</label>
+      <select id="insertPos" style="width:100%;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:7px 10px;">
+        <option value="last">一番最後に追加</option>
+      </select>
+    </div>
     <div class="frow">
       <label>設備（複数登録可）</label>
       <div class="ce-equip" id="custEquips"></div>
@@ -1271,9 +1277,9 @@ function renderCustList(){
       <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:left;color:#334155;">設備</th>
       <th style="padding:7px 12px;border:1px solid #cbd5e1;color:#334155;"></th>
     </tr></thead><tbody>`;
-  S.customers.forEach(c=>{
+  S.customers.forEach((c,i)=>{
     const eqs=c.equips.map(e=>`<span class="typebadge ${e.key==='boiler'?'boiler':e.key==='ff'?'ff':e.key==='other'?'other':'poly'}">${e.label}</span>`).join(' ');
-    html+=`<tr style="background:${S.customers.indexOf(c)%2===0?'#fff':'#f8fafc'};">
+    html+=`<tr style="background:${i%2===0?'#fff':'#f8fafc'};">
       <td style="padding:7px 12px;border:1px solid #cbd5e1;color:#000;font-weight:500;">${c.name}</td>
       <td style="padding:7px 12px;border:1px solid #cbd5e1;">${eqs}</td>
       <td style="padding:7px 12px;border:1px solid #cbd5e1;"><button class="btn sm" onclick="openEditCustomer(${c.id})">編集</button></td>
@@ -1283,12 +1289,23 @@ function renderCustList(){
   el.innerHTML=html;
 }
 
+
 function openAddCustomer(){
   editingCid=null;
   document.getElementById('custModalTitle').textContent='👤 顧客追加';
   document.getElementById('custName').value='';
   document.getElementById('custDelBtn').style.display='none';
   document.getElementById('custEquips').innerHTML='';
+  document.getElementById('insertPosRow').style.display='';
+  // 挿入位置の選択肢を生成
+  const sel = document.getElementById('insertPos');
+  sel.innerHTML = '<option value="last">一番最後に追加</option>';
+  S.customers.forEach((c,i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    opt.textContent = '「' + c.name + '」の下に追加';
+    sel.appendChild(opt);
+  });
   addEquipRow();
   document.getElementById('custModal').classList.add('open');
   document.getElementById('custName').focus();
@@ -1299,6 +1316,7 @@ function openEditCustomer(cid){
   document.getElementById('custModalTitle').textContent=`✏️ 顧客編集: ${c.name}`;
   document.getElementById('custName').value=c.name;
   document.getElementById('custDelBtn').style.display='';
+  document.getElementById('insertPosRow').style.display='none';
   const ce=document.getElementById('custEquips');ce.innerHTML='';
   c.equips.forEach(eq=>addEquipRow(eq));
   document.getElementById('custModal').classList.add('open');
@@ -1334,7 +1352,13 @@ function saveCustomer(){
     const c=S.customers.find(x=>x.id===editingCid);
     c.name=name;c.equips=equips;
   } else {
-    S.customers.push({id:nextCid++,name,equips});
+    const newCust = {id:nextCid++,name,equips};
+    const pos = document.getElementById('insertPos').value;
+    if(pos === 'last'){
+      S.customers.push(newCust);
+    } else {
+      S.customers.splice(parseInt(pos)+1, 0, newCust);
+    }
   }
   save();closeCustModal();renderTable();renderCustList();
 }
