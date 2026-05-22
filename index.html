@@ -37,7 +37,7 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;
-  background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;overflow-x:hidden;
+  background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;
   -webkit-text-size-adjust:100%;
 }
 
@@ -394,7 +394,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
   <div class="logo">🛢 灯油配達管理 <span>v2</span></div>
   <div class="sep"></div>
   <input class="search" id="searchBox" placeholder="🔍 顧客名検索" oninput="renderTable()">
-  <button class="btn blue" onclick="showPrint()">🖨 1週間の予定を印刷</button>
+  <button class="btn blue" onclick="openPrintModal()">🖨 予定印刷</button>
   <button class="btn green" onclick="openExportModal()">💾 データ保存</button>
 </div>
 
@@ -687,6 +687,25 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 </div>
 
 <!-- EXPORT / IMPORT MODAL -->
+<div class="overlay" id="printModal">
+  <div class="modal" style="width:420px;">
+    <h2>🖨 予定印刷</h2>
+    <div class="frow">
+      <label>印刷開始日</label>
+      <input type="date" id="printFrom">
+    </div>
+    <div class="frow">
+      <label>印刷終了日</label>
+      <input type="date" id="printTo">
+    </div>
+    <div id="printRangeMsg" style="font-size:11px;color:var(--muted);margin-bottom:8px;"></div>
+    <div class="mactions">
+      <button class="btn" onclick="document.getElementById('printModal').classList.remove('open')">キャンセル</button>
+      <button class="btn blue" onclick="execPrint()">🖨 PDFを作成・印刷</button>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="exportModal">
   <div class="modal" style="width:480px;">
     <h2>💾 データの保存・読み込み</h2>
@@ -858,7 +877,11 @@ function updateStockBar(){
 function renderTable(){
   const mode = 'biz'; // 平日のみ固定
   const dates = getMonthDates(monthOffset, mode);
-  const todStr = todayStr();
+  // 今日が土日なら直近の平日（前の金曜）を「今日」として扱う
+  const realToday = new Date();
+  let highlightDay = new Date(realToday);
+  while(isWeekend(highlightDay)) highlightDay.setDate(highlightDay.getDate() - 1);
+  const todStr = ds(highlightDay);
   const search = document.getElementById('searchBox').value.trim().toLowerCase();
 
   // 月ラベル
@@ -946,12 +969,14 @@ function renderTable(){
 
   // 今月表示の場合、今日のセルが左端に来るようにスクロール
   if(monthOffset === 0){
-    const twrap = document.getElementById('twrap');
-    const todayTh = twrap.querySelector('th.dhdr.today');
-    if(todayTh){
-      const nameColW = 120;
-      twrap.scrollLeft = todayTh.offsetLeft - nameColW;
-    }
+    setTimeout(() => {
+      const twrap = document.getElementById('twrap');
+      const todayTh = twrap.querySelector('th.dhdr.today');
+      if(todayTh){
+        const nameColW = 120;
+        twrap.scrollLeft = todayTh.offsetLeft - nameColW;
+      }
+    }, 50);
   }
 }
 
@@ -1053,6 +1078,7 @@ function cmAddFixed(qty, isTank){
   renderCmLog(rec);
   updateStockBar();
   renderTable();
+  setTimeout(initDragScroll, 100);
 }
 
 function openCell(cid, equipKey, dateStr){
@@ -1203,9 +1229,12 @@ function clearCell(){
 function closeCellModal(){
   if(cellCtx){
     const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
-    if(S.deliveries[recKey]){
+    const scheduled = document.getElementById('cmScheduled').checked;
+    if(!S.deliveries[recKey] && scheduled){
+      // チェックが入っているのにデータがない場合は新規作成
+      S.deliveries[recKey] = {logs:[], scheduled:true};
+    } else if(S.deliveries[recKey]){
       const rec = S.deliveries[recKey];
-      const scheduled = document.getElementById('cmScheduled').checked;
       if(!rec.logs.length && !scheduled){
         delete S.deliveries[recKey];
       } else {
@@ -1666,31 +1695,44 @@ function execZanmerAwase(){
 // ═══════════════════════════════════════════
 // PRINT
 // ═══════════════════════════════════════════
-function showPrint(){
-  // 現在表示中の月から、今週（monthOffset基準）の月〜金を取得
+function openPrintModal(){
+  // デフォルトで今週の月〜金をセット
   const today = new Date();
-  // 印刷対象週：配達管理表で見ている月の、今週または次週を選ぶ
-  // → 現在の weekOffset をそのまま使う（配達管理表と同じ週）
-  // まず今週の月曜を求める
   const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
   const mon = new Date(today);
-  mon.setDate(today.getDate() - dow + monthOffset * 7);
+  mon.setDate(today.getDate() - dow);
+  const fri = new Date(mon);
+  fri.setDate(mon.getDate() + 4);
+  document.getElementById('printFrom').value = ds(mon);
+  document.getElementById('printTo').value = ds(fri);
+  document.getElementById('printModal').classList.add('open');
+}
 
-  // 月〜金（土日除く）の5日間
+function execPrint(){
+  const fromStr = document.getElementById('printFrom').value;
+  const toStr   = document.getElementById('printTo').value;
+  if(!fromStr || !toStr){ alert('日付を選択してください'); return; }
+  const fromD = pd(fromStr);
+  const toD   = pd(toStr);
+  if(fromD > toD){ alert('開始日は終了日より前にしてください'); return; }
+  document.getElementById('printModal').classList.remove('open');
+
+  // 指定範囲の平日を取得
   const weekDates = [];
-  for(let i = 0; i < 7; i++){
-    const d = new Date(mon);
-    d.setDate(mon.getDate() + i);
-    if(!isWeekend(d)) weekDates.push(d);
+  const cur = new Date(fromD);
+  while(cur <= toD){
+    if(!isWeekend(cur)) weekDates.push(new Date(cur));
+    cur.setDate(cur.getDate() + 1);
   }
-  if(!weekDates.length){ alert('印刷する日付がありません'); return; }
+  if(!weekDates.length){ alert('指定範囲に平日がありません'); return; }
 
+  const today = new Date();
   const y = weekDates[0].getFullYear();
   const m = weekDates[0].getMonth() + 1;
   const d1 = weekDates[0].getDate();
   const d2 = weekDates[weekDates.length-1].getDate();
   const m2 = weekDates[weekDates.length-1].getMonth() + 1;
-  const dateRange = y + '年' + m + '月' + d1 + '日（月）〜' + (m2 !== m ? m2+'月' : '') + d2 + '日（金）';
+  const dateRange = y + '年' + m + '月' + d1 + '日〜' + (m2 !== m ? m2+'月' : '') + d2 + '日';
   const todStr = ds(today);
 
   // 予定のある顧客・設備を抽出
@@ -1745,7 +1787,7 @@ function showPrint(){
         let cellBg = h.isToday ? 'background:#fffbf5;' : h.isHol ? 'background:#fff8f8;' : '';
         if(rec){
           if(rec.scheduled){
-            html += `<td class="ps" style="${cellBg}">予定</td>`;
+            html += `<td class="ps" style="${cellBg}">○</td>`;
           } else {
             const canT  = rec.logs.filter(l=>!l.isTank).reduce((a,l)=>a+l.qty,0);
             const tankT = rec.logs.filter(l=> l.isTank).reduce((a,l)=>a+l.qty,0);
@@ -1858,6 +1900,30 @@ function importJSON(event){
   };
   reader.readAsText(file);
 }
+// マウスドラッグでスクロール
+function initDragScroll(){
+  const el = document.getElementById('twrap');
+  if(!el) return;
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+  el.addEventListener('mousedown', e => {
+    isDown = true;
+    el.style.cursor = 'grabbing';
+    startX = e.pageX - el.offsetLeft;
+    scrollLeft = el.scrollLeft;
+  });
+  el.addEventListener('mouseleave', () => { isDown = false; el.style.cursor = 'default'; });
+  el.addEventListener('mouseup', () => { isDown = false; el.style.cursor = 'default'; });
+  el.addEventListener('mousemove', e => {
+    if(!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - el.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    el.scrollLeft = scrollLeft - walk;
+  });
+}
+
 function init(){
   updateStockBar();
   renderTable();
