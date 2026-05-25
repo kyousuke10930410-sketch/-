@@ -715,7 +715,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
     <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid #e2e8f0;position:sticky;top:0;background:#fff;z-index:10;">
       <div style="font-size:14px;font-weight:700;color:#1e293b;">🖨 印刷プレビュー</div>
       <div style="display:flex;gap:8px;">
-        <button class="btn blue" onclick="window.print()">🖨 印刷・PDF保存</button>
+        <button class="btn blue" onclick="doPrint()">🖨 印刷・PDF保存</button>
         <button class="btn" onclick="document.getElementById('printPreviewModal').classList.remove('open')">閉じる</button>
       </div>
     </div>
@@ -1712,6 +1712,13 @@ function execZanmerAwase(){
 // ═══════════════════════════════════════════
 // PRINT
 // ═══════════════════════════════════════════
+function doPrint(){
+  // プレビュー内容をprint-areaにコピーして印刷
+  const previewHtml = document.getElementById('printPreviewContent').innerHTML;
+  document.getElementById('printArea').innerHTML = previewHtml;
+  window.print();
+}
+
 function openPrintModal(){
   // デフォルトで今週の月〜金をセット
   const today = new Date();
