@@ -425,8 +425,10 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 <div id="tab1" style="display:none;padding:16px 20px;">
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
-    <h2 style="font-size:15px;font-weight:700;color:var(--text);">📋 本日の在庫管理表</h2>
-    <span id="stockTabDate" style="font-size:12px;color:var(--muted);"></span>
+    <h2 style="font-size:15px;font-weight:700;color:var(--text);">📋 在庫管理表</h2>
+    <input type="date" id="stockTabDateInput"
+      style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;padding:4px 8px;"
+      onchange="renderStockTab()">
     <div class="sep"></div>
     <span id="autoSaveMsg" style="font-size:11px;color:var(--green);display:none;">✅ 自動保存済み</span>
     <button class="btn sm blue" onclick="zanmerAwase()">🔄 残合わせ</button>
@@ -1480,10 +1482,10 @@ function switchTab(n){
 }
 
 function renderStockTab(){
-  const d = new Date();
-  const dateStr = todayStr();
-  document.getElementById('stockTabDate').textContent =
-    d.getFullYear()+'年'+(d.getMonth()+1)+'月'+d.getDate()+'日（'+['日','月','火','水','木','金','土'][d.getDay()]+'）';
+  const inp = document.getElementById('stockTabDateInput');
+  if(!inp.value) inp.value = todayStr();
+  const dateStr = inp.value;
+  const d = new Date(dateStr + 'T00:00:00');
 
   // 保存済みデータを復元
   const saved = S.stockSheet && S.stockSheet[dateStr] ? S.stockSheet[dateStr] : {};
@@ -1620,7 +1622,8 @@ function autoSaveStockSheet(){
   // 在庫タブが表示されていない場合はスキップ
   if(!document.getElementById('ssZanmai')) return;
   if(document.getElementById('tab1').style.display === 'none') return;
-  const dateStr = todayStr();
+  const inp = document.getElementById('stockTabDateInput');
+  const dateStr = inp && inp.value ? inp.value : todayStr();
   if(!S.stockSheet) S.stockSheet = {};
   const delivWraps = document.querySelectorAll('#ssDelivList > div');
   const delivRows = Array.from(delivWraps).map(wrap => {
