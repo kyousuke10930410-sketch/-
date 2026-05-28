@@ -671,6 +671,43 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
       <div class="ce-equip" id="custEquips"></div>
       <button class="btn sm" style="margin-top:6px;" onclick="addEquipRow()">＋ 設備追加</button>
     </div>
+
+    <!-- 配達ペース -->
+    <div class="frow">
+      <label>配達ペース（夏）</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <select id="custPaceSummerSel" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:6px 10px;" onchange="onPaceSelChange('Summer')">
+          <option value="7">1週（7日）</option>
+          <option value="14">2週（14日）</option>
+          <option value="21">3週（21日）</option>
+          <option value="28">4週（28日）</option>
+          <option value="custom">手動入力</option>
+        </select>
+        <div id="custPaceSummerCustom" style="display:none;align-items:center;gap:4px;">
+          <input type="number" id="custPaceSummerDays" min="1" max="365" placeholder="日数"
+            style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:6px 8px;text-align:center;">
+          <span style="font-size:12px;color:var(--muted);">日</span>
+        </div>
+      </div>
+    </div>
+    <div class="frow">
+      <label>配達ペース（冬）</label>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+        <select id="custPaceWinterSel" style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:6px 10px;" onchange="onPaceSelChange('Winter')">
+          <option value="7">1週（7日）</option>
+          <option value="14">2週（14日）</option>
+          <option value="21">3週（21日）</option>
+          <option value="28">4週（28日）</option>
+          <option value="custom">手動入力</option>
+        </select>
+        <div id="custPaceWinterCustom" style="display:none;align-items:center;gap:4px;">
+          <input type="number" id="custPaceWinterDays" min="1" max="365" placeholder="日数"
+            style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:13px;padding:6px 8px;text-align:center;">
+          <span style="font-size:12px;color:var(--muted);">日</span>
+        </div>
+      </div>
+    </div>
+
     <div class="mactions">
       <button class="btn" onclick="closeCustModal()">キャンセル</button>
       <button class="btn red" id="custDelBtn" style="display:none;" onclick="deleteCustomer()">削除</button>
@@ -1359,13 +1396,19 @@ function renderCustList(){
     <thead><tr style="background:#f1f5f9;">
       <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:left;color:#334155;">顧客名</th>
       <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:left;color:#334155;">設備</th>
+      <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:center;color:#334155;">夏</th>
+      <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:center;color:#334155;">冬</th>
       <th style="padding:7px 12px;border:1px solid #cbd5e1;color:#334155;"></th>
     </tr></thead><tbody>`;
   S.customers.forEach((c,i)=>{
     const eqs=c.equips.map(e=>`<span class="typebadge ${e.key==='boiler'?'boiler':e.key==='ff'?'ff':e.key==='other'?'other':'poly'}">${e.label}</span>`).join(' ');
+    const paceS = c.paceSummer ? c.paceSummer+'日' : '-';
+    const paceW = c.paceWinter ? c.paceWinter+'日' : '-';
     html+=`<tr style="background:${i%2===0?'#fff':'#f8fafc'};">
       <td style="padding:7px 12px;border:1px solid #cbd5e1;color:#000;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;min-width:100px;">${c.name}</td>
       <td style="padding:7px 12px;border:1px solid #cbd5e1;">${eqs}</td>
+      <td style="padding:7px 12px;border:1px solid #cbd5e1;text-align:center;color:var(--blue);font-family:'Courier New',Courier,monospace;font-weight:700;">${paceS}</td>
+      <td style="padding:7px 12px;border:1px solid #cbd5e1;text-align:center;color:var(--orange);font-family:'Courier New',Courier,monospace;font-weight:700;">${paceW}</td>
       <td style="padding:7px 12px;border:1px solid #cbd5e1;"><button class="btn sm" onclick="openEditCustomer(${c.id})">編集</button></td>
     </tr>`;
   });
@@ -1374,6 +1417,34 @@ function renderCustList(){
 }
 
 
+function onPaceSelChange(season){
+  const sel = document.getElementById('custPace'+season+'Sel');
+  const customDiv = document.getElementById('custPace'+season+'Custom');
+  customDiv.style.display = sel.value === 'custom' ? 'flex' : 'none';
+}
+
+function setPaceUI(season, days){
+  const sel = document.getElementById('custPace'+season+'Sel');
+  const customDiv = document.getElementById('custPace'+season+'Custom');
+  const opts = ['7','14','21','28'];
+  if(opts.includes(String(days))){
+    sel.value = String(days);
+    customDiv.style.display = 'none';
+  } else {
+    sel.value = 'custom';
+    customDiv.style.display = 'flex';
+    document.getElementById('custPace'+season+'Days').value = days || '';
+  }
+}
+
+function getPaceDays(season){
+  const sel = document.getElementById('custPace'+season+'Sel');
+  if(sel.value === 'custom'){
+    return parseInt(document.getElementById('custPace'+season+'Days').value) || 14;
+  }
+  return parseInt(sel.value);
+}
+
 function openAddCustomer(){
   editingCid=null;
   document.getElementById('custModalTitle').textContent='👤 顧客追加';
@@ -1381,6 +1452,8 @@ function openAddCustomer(){
   document.getElementById('custDelBtn').style.display='none';
   document.getElementById('custEquips').innerHTML='';
   document.getElementById('insertPosRow').style.display='';
+  setPaceUI('Summer', 14);
+  setPaceUI('Winter', 7);
   // 挿入位置の選択肢を生成
   const sel = document.getElementById('insertPos');
   sel.innerHTML = '<option value="last">一番最後に追加</option>';
@@ -1401,6 +1474,8 @@ function openEditCustomer(cid){
   document.getElementById('custName').value=c.name;
   document.getElementById('custDelBtn').style.display='';
   document.getElementById('insertPosRow').style.display='none';
+  setPaceUI('Summer', c.paceSummer || 14);
+  setPaceUI('Winter', c.paceWinter || 7);
   const ce=document.getElementById('custEquips');ce.innerHTML='';
   c.equips.forEach(eq=>addEquipRow(eq));
   document.getElementById('custModal').classList.add('open');
@@ -1432,11 +1507,14 @@ function saveCustomer(){
     const interval = existingEquip ? existingEquip.interval : 14;
     equips.push({key,label,interval});
   });
+  const paceSummer = getPaceDays('Summer');
+  const paceWinter = getPaceDays('Winter');
   if(editingCid){
     const c=S.customers.find(x=>x.id===editingCid);
     c.name=name;c.equips=equips;
+    c.paceSummer=paceSummer;c.paceWinter=paceWinter;
   } else {
-    const newCust = {id:nextCid++,name,equips};
+    const newCust = {id:nextCid++,name,equips,paceSummer,paceWinter};
     const pos = document.getElementById('insertPos').value;
     if(pos === 'last'){
       S.customers.push(newCust);
