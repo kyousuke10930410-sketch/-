@@ -1029,7 +1029,10 @@ function renderTable(){
       const twrap = document.getElementById('twrap');
       const todayTh = twrap.querySelector('th.dhdr.today');
       if(todayTh){
-        twrap.scrollLeft = todayTh.offsetLeft - twrap.offsetWidth * 0.35;
+        // 顧客名列の固定幅を考慮してスクロール
+        const nameCol = twrap.querySelector('th.cname');
+        const nameColWidth = nameCol ? nameCol.offsetWidth : 120;
+        twrap.scrollLeft = todayTh.offsetLeft - nameColWidth;
       }
     }, 150);
   }
