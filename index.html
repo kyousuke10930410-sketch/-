@@ -933,10 +933,10 @@ function updateStockBar(){
 function renderTable(){
   const mode = 'biz'; // 平日のみ固定
   const dates = getMonthDates(monthOffset, mode);
-  // 今日が土日なら直近の平日（前の金曜）を「今日」として扱う
+  // 今日が土日・祝日なら直近の平日を「今日」として扱う
   const realToday = new Date();
   let highlightDay = new Date(realToday);
-  while(isWeekend(highlightDay)) highlightDay.setDate(highlightDay.getDate() - 1);
+  while(!isBiz(highlightDay)) highlightDay.setDate(highlightDay.getDate() - 1);
   const todStr = ds(highlightDay);
   const search = document.getElementById('searchBox').value.trim().toLowerCase();
 
@@ -1029,10 +1029,9 @@ function renderTable(){
       const twrap = document.getElementById('twrap');
       const todayTh = twrap.querySelector('th.dhdr.today');
       if(todayTh){
-        const nameColW = 120;
-        twrap.scrollLeft = todayTh.offsetLeft - nameColW;
+        twrap.scrollLeft = todayTh.offsetLeft - twrap.offsetWidth * 0.35;
       }
-    }, 50);
+    }, 150);
   }
 }
 
