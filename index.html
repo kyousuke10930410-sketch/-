@@ -1757,11 +1757,16 @@ function zanmerAwase(){
   document.getElementById('zanmerModal').classList.add('open');
 }
 function execZanmerAwase(){
-  // 夕方残を先に取得してから保存
+  // 夕方残を先に取得
   const yugata = parseInt(document.getElementById('ssYugata').textContent) || 0;
   document.getElementById('zanmerModal').classList.remove('open');
-  const dateStr = todayStr();
+
+  // 表示中の日付を使う（日付選択対応）
+  const inp = document.getElementById('stockTabDateInput');
+  const dateStr = inp && inp.value ? inp.value : todayStr();
+
   if(!S.stockSheet) S.stockSheet = {};
+
   // 配達リストを履歴に保存（最大5回分）
   const delivWraps = document.querySelectorAll('#ssDelivList > div');
   const delivRows = Array.from(delivWraps).map(wrap => {
@@ -1773,23 +1778,33 @@ function execZanmerAwase(){
     S.delivHistory.unshift({ date: dateStr, rows: delivRows });
     if(S.delivHistory.length > 5) S.delivHistory = S.delivHistory.slice(0, 5);
   }
-  // 翌営業日の前残にセット
-  const tomorrow = new Date();
+
+  // 翌営業日を計算
+  const baseDate = new Date(dateStr + 'T00:00:00');
+  const tomorrow = new Date(baseDate);
   tomorrow.setDate(tomorrow.getDate() + 1);
   while(!isBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = ds(tomorrow);
-  S.stockSheet[tomorrowStr] = { zanmai: yugata, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
-  // 本日データをリセット（autoSaveが走らないよう先にsaveしてからrenderStockTab）
+
+  // 翌営業日の前残にセット（既存データがあっても前残だけ上書き）
+  if(!S.stockSheet[tomorrowStr]){
+    S.stockSheet[tomorrowStr] = { zanmai: yugata, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
+  } else {
+    S.stockSheet[tomorrowStr].zanmai = yugata;
+  }
+
+  // 本日データをリセット
   S.stockSheet[dateStr] = { zanmai: 0, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
+
+  // 先に保存してからUIを更新（autoSaveが上書きしないよう日付を翌日に変更）
   save();
-  // autoSaveが走らないよう一時的に無効化してrenderStockTab
+  inp.value = tomorrowStr;
+
+  // autoSaveを一時無効化してrenderStockTab
   const _orig = window.autoSaveStockSheet;
   window.autoSaveStockSheet = function(){};
   renderStockTab();
   window.autoSaveStockSheet = _orig;
-  // 画面に前残として夕方残を表示
-  document.getElementById('ssZanmai').value = yugata;
-  calcStockSheet();
 }
 
 // ═══════════════════════════════════════════
