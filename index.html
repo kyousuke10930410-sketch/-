@@ -1162,13 +1162,20 @@ function openCell(cid, equipKey, dateStr){
 
   // 既存の次回予定があれば日付入力に表示
   const prefix = cid + ':' + equipKey + ':';
-  const existingNext = Object.keys(S.deliveries)
-    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) > dateStr && S.deliveries[k].scheduled)
-    .sort()[0];
+  // 当日自身がscheduledの場合も含めて検索
+  const existingNextKeys = Object.keys(S.deliveries)
+    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) >= dateStr && S.deliveries[k].scheduled)
+    .sort();
+  const existingNext = existingNextKeys[0];
   const dateInput = document.getElementById('cmNextDateInput');
   const msg = document.getElementById('cmNextSetMsg');
   msg.style.display = 'none';
-  dateInput.value = existingNext ? existingNext.slice(prefix.length) : '';
+  // 当日自身がscheduledの場合はその日付をセット
+  if(rec.scheduled && !existingNext){
+    dateInput.value = dateStr;
+  } else {
+    dateInput.value = existingNext ? existingNext.slice(prefix.length) : '';
+  }
 
   document.getElementById('cellModal').classList.add('open');
 }
@@ -1181,9 +1188,9 @@ function cmSetNextDate(){
 
   const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
 
-  // 既存の次回予定を削除
+  // 既存の次回予定を削除（同じ日も含む）
   Object.keys(S.deliveries)
-    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) > cellCtx.dateStr && S.deliveries[k].scheduled)
+    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) >= cellCtx.dateStr && S.deliveries[k].scheduled)
     .forEach(k => delete S.deliveries[k]);
 
   // 新しい予定をセット
@@ -1203,7 +1210,7 @@ function cmClearNextDate(){
   if(!cellCtx) return;
   const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
   Object.keys(S.deliveries)
-    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) > cellCtx.dateStr && S.deliveries[k].scheduled)
+    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) >= cellCtx.dateStr && S.deliveries[k].scheduled)
     .forEach(k => delete S.deliveries[k]);
   save();
   renderTable();
@@ -1290,13 +1297,20 @@ function closeCellModal(){
   if(cellCtx){
     const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
     const scheduled = document.getElementById('cmScheduled').checked;
-    if(!S.deliveries[recKey] && scheduled){
-      // チェックが入っているのにデータがない場合は新規作成
+    const rec = S.deliveries[recKey];
+    if(!rec && scheduled){
       S.deliveries[recKey] = {logs:[], scheduled:true};
-    } else if(S.deliveries[recKey]){
-      const rec = S.deliveries[recKey];
-      if(!rec.logs.length && !scheduled){
+    } else if(rec){
+      const hasNextDate = document.getElementById('cmNextDateInput').value !== '';
+      if(!rec.logs.length && !scheduled && !rec.scheduled && !hasNextDate){
+        // ログも予定もない場合のみ削除
         delete S.deliveries[recKey];
+      } else if(rec.logs.length === 0 && rec.scheduled && !scheduled){
+        // checkboxはfalseだが、カレンダーで同日予定がセットされている場合はscheduledを維持
+        if(!hasNextDate){
+          rec.scheduled = false;
+        }
+        // hasNextDateがある場合はscheduledをtrueのまま維持
       } else {
         rec.scheduled = scheduled;
       }
