@@ -426,9 +426,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
     <h2 style="font-size:15px;font-weight:700;color:var(--text);">📋 在庫管理表</h2>
-    <input type="date" id="stockTabDateInput"
-      style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:12px;padding:4px 8px;"
-      onchange="renderStockTab()">
+    <input type="hidden" id="stockTabDateInput">
     <div class="sep"></div>
     <span id="autoSaveMsg" style="font-size:11px;color:var(--green);display:none;">✅ 自動保存済み</span>
     <button class="btn sm blue" onclick="zanmerAwase()">🔄 残合わせ</button>
@@ -1572,6 +1570,7 @@ function switchTab(n){
 
 function renderStockTab(){
   const inp = document.getElementById('stockTabDateInput');
+  // 値がなければ今日の日付をセット
   if(!inp.value) inp.value = todayStr();
   const dateStr = inp.value;
   const d = new Date(dateStr + 'T00:00:00');
