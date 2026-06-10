@@ -464,14 +464,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
         <span style="font-size:12px;font-weight:700;color:#dc2626;">配達合計（－）</span>
         <span id="ssDelivTotalBottom" style="font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:700;color:#dc2626;">0本</span>
       </div>
-      <!-- 過去の配達履歴 -->
-      <div id="ssDelivHistory" style="display:none;border-top:1px solid #fca5a5;padding:8px 14px;">
-        <div style="font-size:11px;color:#dc2626;font-weight:700;margin-bottom:6px;">📋 過去の配達履歴（直近5回）</div>
-        <div id="ssDelivHistoryList" style="display:flex;flex-direction:column;gap:6px;"></div>
-      </div>
-      <div style="padding:6px 14px;">
-        <button class="btn sm" style="font-size:11px;color:var(--muted);" onclick="toggleDelivHistory()">📋 過去の履歴を見る</button>
-      </div>
+
     </div>
 
     <!-- ③ 給油所（仕入れ） -->
@@ -1616,7 +1609,7 @@ function renderStockTab(){
   const saved = S.stockSheet && S.stockSheet[dateStr] ? S.stockSheet[dateStr] : {};
 
   // 前残
-  document.getElementById('ssZanmai').value = saved.zanmai != null ? saved.zanmai : '';
+  document.getElementById('ssZanmai').value = saved.zanmai ? saved.zanmai : '';
 
   // 油庫もらい行
   const yukoData = saved.yukoIn || [null];
@@ -1651,7 +1644,7 @@ function makeNumRow(containerId, onInput){
   const wrap = document.createElement('div');
   wrap.style.cssText = 'display:flex;align-items:center;gap:6px;';
   const inp = document.createElement('input');
-  inp.type = 'number'; inp.min = '0'; inp.placeholder = '0';
+  inp.type = 'number'; inp.min = '0'; inp.placeholder = '';
   inp.style.cssText = 'width:70px;font-family:"Courier New",Courier,monospace;font-size:16px;font-weight:700;text-align:center;border:1px solid #cbd5e1;border-radius:5px;padding:3px;color:#1e293b;';
   inp.oninput = () => calcStockSheet();
   const unit = document.createElement('span');
@@ -1672,9 +1665,9 @@ function addYukoRow()    { makeNumRow('ssYukoCells');    calcStockSheet(); }
 function addYukoOutRow() { makeNumRow('ssYukoOutCells'); calcStockSheet(); }
 function addKyuyuRow()   { makeNumRow('ssKyuyuCells');   calcStockSheet(); }
 
-function addYukoRowWith(v)    { const inp=makeNumRow('ssYukoCells');    if(v!=null) inp.value=v; }
-function addYukoOutRowWith(v) { const inp=makeNumRow('ssYukoOutCells'); if(v!=null) inp.value=v; }
-function addKyuyuRowWith(v)   { const inp=makeNumRow('ssKyuyuCells');   if(v!=null) inp.value=v; }
+function addYukoRowWith(v)    { const inp=makeNumRow('ssYukoCells');    if(v!=null && v!==0) inp.value=v; }
+function addYukoOutRowWith(v) { const inp=makeNumRow('ssYukoOutCells'); if(v!=null && v!==0) inp.value=v; }
+function addKyuyuRowWith(v)   { const inp=makeNumRow('ssKyuyuCells');   if(v!=null && v!==0) inp.value=v; }
 
 function getColSum(containerId){
   return Array.from(document.querySelectorAll('#'+containerId+' input'))
@@ -1697,7 +1690,7 @@ function addDelivRow(name, qty){
   const qtyInp = document.createElement('input');
   qtyInp.type = 'number';
   qtyInp.min = '0';
-  qtyInp.placeholder = '0';
+  qtyInp.placeholder = '';
   qtyInp.value = qty != null ? qty : '';
   qtyInp.style.cssText = 'width:64px;font-family:"Courier New",Courier,monospace;font-size:16px;font-weight:700;text-align:center;border:1px solid #cbd5e1;border-radius:5px;padding:4px;color:#1e293b;';
   qtyInp.oninput = () => calcStockSheet();
@@ -1744,24 +1737,27 @@ function calcStockSheet(){
 }
 
 function cleanOldStockSheet(){
-  // 直近5営業日以外のデータを削除
   if(!S.stockSheet) return;
+  // 直近5営業日＋翌営業日のみ保持
   const today = new Date();
-  const bizDays = [];
+  const keepDays = [];
+
+  // 過去の直近5営業日を取得
   let d = new Date(today);
-  // 過去30日から直近5営業日を取得
-  for(let i = 0; i < 30 && bizDays.length < 5; i++){
-    if(isBiz(d)) bizDays.push(ds(d));
+  while(keepDays.length < 5){
+    if(isBiz(d)) keepDays.push(ds(d));
     d.setDate(d.getDate() - 1);
   }
+
   // 翌営業日も保持
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
   while(!isBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
-  bizDays.push(ds(tomorrow));
+  keepDays.push(ds(tomorrow));
 
+  // 保持リスト以外を削除
   Object.keys(S.stockSheet).forEach(k => {
-    if(!bizDays.includes(k)) delete S.stockSheet[k];
+    if(!keepDays.includes(k)) delete S.stockSheet[k];
   });
 }
 
@@ -1795,38 +1791,44 @@ function autoSaveStockSheet(){
 
 function autoUpdateNextDayZanmai(dateStr){
   if(!S.stockSheet) return;
-  const data = S.stockSheet[dateStr];
-  if(!data) return;
 
-  // 当日の夕方残を計算
-  const zanmai  = data.zanmai || 0;
-  const yukoIn  = (data.yukoIn  || []).reduce((s,v) => s+(v||0), 0);
-  const yukoOut = (data.yukoOut || []).reduce((s,v) => s+(v||0), 0);
-  const kyuyu   = (data.kyuyu   || []).reduce((s,v) => s+(v||0), 0);
-  const delTotal = (data.delivRows || []).reduce((s,r) => s+(r.qty||0), 0);
-  const yugata = zanmai + kyuyu + yukoIn - delTotal - yukoOut;
-
-  // 翌営業日を計算
-  const base = new Date(dateStr + 'T00:00:00');
-  const tomorrow = new Date(base);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  while(!isBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
-  const tomorrowStr = ds(tomorrow);
-
-  // 翌営業日の前残を自動更新（直近5営業日以内のみ）
+  // 直近5営業日+翌日のリストを取得
   const today = new Date();
-  const fiveBizDaysLater = new Date(today);
-  let count = 0;
-  let td = new Date(today);
-  for(let i = 0; i < 30 && count < 5; i++){
-    if(isBiz(td)) count++;
-    td.setDate(td.getDate() + 1);
+  const keepDays = [];
+  let d = new Date(today);
+  while(keepDays.length < 5){
+    if(isBiz(d)) keepDays.push(ds(d));
+    d.setDate(d.getDate() - 1);
   }
-  if(tomorrow <= td){
-    if(!S.stockSheet[tomorrowStr]){
-      S.stockSheet[tomorrowStr] = { zanmai: yugata, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
+  const nextD = new Date(today);
+  nextD.setDate(nextD.getDate() + 1);
+  while(!isBiz(nextD)) nextD.setDate(nextD.getDate() + 1);
+  keepDays.push(ds(nextD));
+  keepDays.sort();
+
+  // 変更された日付から始まり、連鎖的に翌日の前残を更新
+  const startIdx = keepDays.indexOf(dateStr);
+  if(startIdx === -1) return;
+
+  for(let i = startIdx; i < keepDays.length - 1; i++){
+    const curStr  = keepDays[i];
+    const nextStr = keepDays[i + 1];
+    const data = S.stockSheet[curStr];
+    if(!data) continue;
+
+    // 当日の夕方残を計算
+    const zanmai   = data.zanmai || 0;
+    const yukoIn   = (data.yukoIn  || []).reduce((s,v) => s+(v||0), 0);
+    const yukoOut  = (data.yukoOut || []).reduce((s,v) => s+(v||0), 0);
+    const kyuyu    = (data.kyuyu   || []).reduce((s,v) => s+(v||0), 0);
+    const delTotal = (data.delivRows || []).reduce((s,r) => s+(r.qty||0), 0);
+    const yugata   = zanmai + kyuyu + yukoIn - delTotal - yukoOut;
+
+    // 翌日の前残を更新
+    if(!S.stockSheet[nextStr]){
+      S.stockSheet[nextStr] = { zanmai: yugata, yukoIn:[], yukoOut:[], kyuyu:[], delivRows:[] };
     } else {
-      S.stockSheet[tomorrowStr].zanmai = yugata;
+      S.stockSheet[nextStr].zanmai = yugata;
     }
   }
 }
@@ -1866,11 +1868,11 @@ function zanmerAwase(){
   document.getElementById('zanmerModal').classList.add('open');
 }
 function execZanmerAwase(){
-  // 夕方残を先に取得
+  // 夕方残を画面から取得（この時点の値を確定させる）
   const yugata = parseInt(document.getElementById('ssYugata').textContent) || 0;
   document.getElementById('zanmerModal').classList.remove('open');
 
-  // 表示中の日付を使う（日付選択対応）
+  // 表示中の日付を使う
   const inp = document.getElementById('stockTabDateInput');
   const dateStr = inp && inp.value ? inp.value : todayStr();
 
@@ -1895,25 +1897,30 @@ function execZanmerAwase(){
   while(!isBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = ds(tomorrow);
 
-  // 翌営業日の前残にセット（既存データがあっても前残だけ上書き）
+  // 翌営業日の前残にyugataをセット
   if(!S.stockSheet[tomorrowStr]){
     S.stockSheet[tomorrowStr] = { zanmai: yugata, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
   } else {
     S.stockSheet[tomorrowStr].zanmai = yugata;
   }
 
-  // 本日データをリセット
+  // 本日データをリセット（zanmaiは0、他も空に）
   S.stockSheet[dateStr] = { zanmai: 0, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
 
-  // 先に保存してからUIを更新（autoSaveが上書きしないよう日付を翌日に変更）
+  // autoUpdateNextDayZanmaiが走らないよう先に保存
   save();
+
+  // 日付を翌日に切り替えてUIを更新
   inp.value = tomorrowStr;
 
-  // autoSaveを一時無効化してrenderStockTab
-  const _orig = window.autoSaveStockSheet;
+  // autoSaveとautoUpdateを両方無効化してrenderStockTab
+  const _origSave = window.autoSaveStockSheet;
+  const _origUpdate = window.autoUpdateNextDayZanmai;
   window.autoSaveStockSheet = function(){};
+  window.autoUpdateNextDayZanmai = function(){};
   renderStockTab();
-  window.autoSaveStockSheet = _orig;
+  window.autoSaveStockSheet = _origSave;
+  window.autoUpdateNextDayZanmai = _origUpdate;
 }
 
 // ═══════════════════════════════════════════
