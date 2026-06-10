@@ -1575,18 +1575,28 @@ function renderStockTab(){
   const dateStr = inp.value;
   const d = new Date(dateStr + 'T00:00:00');
 
-  // 直近5営業日ボタンを生成
+  // 日付ボタンを生成（今日+過去3営業日+翌営業日）
   const btnContainer = document.getElementById('stockDateBtns');
   if(btnContainer){
     btnContainer.innerHTML = '';
     const today = new Date();
     const bizDays = [];
+
+    // 今日を含む過去4営業日
     let td = new Date(today);
-    for(let i = 0; i < 30 && bizDays.length < 5; i++){
+    while(bizDays.length < 4){
       if(isBiz(td)) bizDays.push(new Date(td));
       td.setDate(td.getDate() - 1);
     }
-    bizDays.reverse().forEach(bd => {
+    bizDays.reverse();
+
+    // 翌営業日を追加
+    const nextD = new Date(today);
+    nextD.setDate(nextD.getDate() + 1);
+    while(!isBiz(nextD)) nextD.setDate(nextD.getDate() + 1);
+    bizDays.push(new Date(nextD));
+
+    bizDays.forEach(bd => {
       const dstr = ds(bd);
       const isSelected = dstr === dateStr;
       const isToday = dstr === todayStr();
@@ -1741,13 +1751,13 @@ function calcStockSheet(){
 
 function cleanOldStockSheet(){
   if(!S.stockSheet) return;
-  // 直近5営業日＋翌営業日のみ保持
+  // 今日＋過去3営業日＋翌営業日のみ保持
   const today = new Date();
   const keepDays = [];
 
-  // 過去の直近5営業日を取得
+  // 今日を含む過去4営業日（今日＋過去3日）を取得
   let d = new Date(today);
-  while(keepDays.length < 5){
+  while(keepDays.length < 4){
     if(isBiz(d)) keepDays.push(ds(d));
     d.setDate(d.getDate() - 1);
   }
@@ -1783,58 +1793,14 @@ function autoSaveStockSheet(){
     kyuyu:   Array.from(document.querySelectorAll('#ssKyuyuCells input')).map(i=>parseInt(i.value)||0),
     delivRows,
   };
-  // 翌営業日の前残を自動更新（先に実行）
-  autoUpdateNextDayZanmai(dateStr);
-  // 古いデータを削除（更新後に実行）
+  // 古いデータを削除して保存
   cleanOldStockSheet();
   save();
   const msg = document.getElementById('autoSaveMsg');
   if(msg){ msg.style.display='inline'; clearTimeout(msg._t); msg._t=setTimeout(()=>msg.style.display='none',1500); }
 }
 
-function autoUpdateNextDayZanmai(dateStr){
-  if(!S.stockSheet) return;
 
-  // 直近5営業日+翌日のリストを取得
-  const today = new Date();
-  const keepDays = [];
-  let d = new Date(today);
-  while(keepDays.length < 5){
-    if(isBiz(d)) keepDays.push(ds(d));
-    d.setDate(d.getDate() - 1);
-  }
-  const nextD = new Date(today);
-  nextD.setDate(nextD.getDate() + 1);
-  while(!isBiz(nextD)) nextD.setDate(nextD.getDate() + 1);
-  keepDays.push(ds(nextD));
-  keepDays.sort();
-
-  // 変更された日付から始まり、連鎖的に翌日の前残を更新
-  const startIdx = keepDays.indexOf(dateStr);
-  if(startIdx === -1) return;
-
-  for(let i = startIdx; i < keepDays.length - 1; i++){
-    const curStr  = keepDays[i];
-    const nextStr = keepDays[i + 1];
-    const data = S.stockSheet[curStr];
-    if(!data) continue;
-
-    // 当日の夕方残を計算
-    const zanmai   = data.zanmai || 0;
-    const yukoIn   = (data.yukoIn  || []).reduce((s,v) => s+(v||0), 0);
-    const yukoOut  = (data.yukoOut || []).reduce((s,v) => s+(v||0), 0);
-    const kyuyu    = (data.kyuyu   || []).reduce((s,v) => s+(v||0), 0);
-    const delTotal = (data.delivRows || []).reduce((s,r) => s+(r.qty||0), 0);
-    const yugata   = zanmai + kyuyu + yukoIn - delTotal - yukoOut;
-
-    // 翌日の前残を更新
-    if(!S.stockSheet[nextStr]){
-      S.stockSheet[nextStr] = { zanmai: yugata, yukoIn:[], yukoOut:[], kyuyu:[], delivRows:[] };
-    } else {
-      S.stockSheet[nextStr].zanmai = yugata;
-    }
-  }
-}
 
 function toggleDelivHistory(){
   const el = document.getElementById('ssDelivHistory');
@@ -1918,12 +1884,9 @@ function execZanmerAwase(){
 
   // autoSaveとautoUpdateを両方無効化してrenderStockTab
   const _origSave = window.autoSaveStockSheet;
-  const _origUpdate = window.autoUpdateNextDayZanmai;
   window.autoSaveStockSheet = function(){};
-  window.autoUpdateNextDayZanmai = function(){};
   renderStockTab();
   window.autoSaveStockSheet = _origSave;
-  window.autoUpdateNextDayZanmai = _origUpdate;
 }
 
 // ═══════════════════════════════════════════
