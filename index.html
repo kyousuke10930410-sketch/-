@@ -1873,20 +1873,21 @@ function execZanmerAwase(){
     S.stockSheet[tomorrowStr].zanmai = yugata;
   }
 
-  // 本日データをリセット（zanmaiは0、他も空に）
-  S.stockSheet[dateStr] = { zanmai: 0, yukoIn:[0], yukoOut:[0], kyuyu:[0], delivRows:[] };
-
-  // autoUpdateNextDayZanmaiが走らないよう先に保存
+  // 保存
   save();
 
   // 日付を翌日に切り替えてUIを更新
   inp.value = tomorrowStr;
 
-  // autoSaveとautoUpdateを両方無効化してrenderStockTab
+  // autoSaveを完全に無効化した状態でrenderStockTabを呼ぶ
+  // その後もautoSaveは無効のままにして、ユーザーが入力したときだけ有効にする
   const _origSave = window.autoSaveStockSheet;
   window.autoSaveStockSheet = function(){};
   renderStockTab();
-  window.autoSaveStockSheet = _origSave;
+  // 少し遅延してからautoSaveを復元（renderStockTabのcalcStockSheetが完全に終わってから）
+  setTimeout(() => {
+    window.autoSaveStockSheet = _origSave;
+  }, 500);
 }
 
 // ═══════════════════════════════════════════
