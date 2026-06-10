@@ -443,7 +443,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
         <input type="number" id="ssZanmai" min="0" placeholder="0"
           style="width:90px;font-family:'Courier New',Courier,monospace;font-size:26px;font-weight:700;
           text-align:center;border:2px solid #cbd5e1;border-radius:6px;padding:4px;color:#1e293b;"
-          oninput="calcStockSheet()">
+          oninput="calcStockSheet(true)">
         <span style="font-size:14px;color:#64748b;">本</span>
       </div>
     </div>
@@ -1659,7 +1659,7 @@ function makeNumRow(containerId, onInput){
   const inp = document.createElement('input');
   inp.type = 'number'; inp.min = '0'; inp.placeholder = '';
   inp.style.cssText = 'width:70px;font-family:"Courier New",Courier,monospace;font-size:16px;font-weight:700;text-align:center;border:1px solid #cbd5e1;border-radius:5px;padding:3px;color:#1e293b;';
-  inp.oninput = () => calcStockSheet();
+  inp.oninput = () => calcStockSheet(true);
   const unit = document.createElement('span');
   unit.textContent = '本';
   unit.style.cssText = 'font-size:12px;color:#64748b;';
@@ -1668,15 +1668,15 @@ function makeNumRow(containerId, onInput){
   del.style.cssText = 'cursor:pointer;color:#94a3b8;font-size:12px;padding:2px 5px;border-radius:3px;border:1px solid transparent;';
   del.onmouseover = () => del.style.borderColor='#ef4444';
   del.onmouseout  = () => del.style.borderColor='transparent';
-  del.onclick = () => { wrap.remove(); calcStockSheet(); };
+  del.onclick = () => { wrap.remove(); calcStockSheet(true); };
   wrap.appendChild(inp); wrap.appendChild(unit); wrap.appendChild(del);
   document.getElementById(containerId).appendChild(wrap);
   return inp;
 }
 
-function addYukoRow()    { makeNumRow('ssYukoCells');    calcStockSheet(); }
-function addYukoOutRow() { makeNumRow('ssYukoOutCells'); calcStockSheet(); }
-function addKyuyuRow()   { makeNumRow('ssKyuyuCells');   calcStockSheet(); }
+function addYukoRow()    { makeNumRow('ssYukoCells');    calcStockSheet(true); }
+function addYukoOutRow() { makeNumRow('ssYukoOutCells'); calcStockSheet(true); }
+function addKyuyuRow()   { makeNumRow('ssKyuyuCells');   calcStockSheet(true); }
 
 function addYukoRowWith(v)    { const inp=makeNumRow('ssYukoCells');    if(v!=null && v!==0) inp.value=v; }
 function addYukoOutRowWith(v) { const inp=makeNumRow('ssYukoOutCells'); if(v!=null && v!==0) inp.value=v; }
@@ -1698,7 +1698,7 @@ function addDelivRow(name, qty){
   nameInp.placeholder = '顧客名';
   nameInp.value = name || '';
   nameInp.style.cssText = 'flex:1;border:1px solid #cbd5e1;border-radius:5px;padding:5px 8px;font-size:13px;color:#1e293b;';
-  nameInp.oninput = () => calcStockSheet();
+  nameInp.oninput = () => calcStockSheet(true);
 
   const qtyInp = document.createElement('input');
   qtyInp.type = 'number';
@@ -1706,7 +1706,7 @@ function addDelivRow(name, qty){
   qtyInp.placeholder = '';
   qtyInp.value = qty != null ? qty : '';
   qtyInp.style.cssText = 'width:64px;font-family:"Courier New",Courier,monospace;font-size:16px;font-weight:700;text-align:center;border:1px solid #cbd5e1;border-radius:5px;padding:4px;color:#1e293b;';
-  qtyInp.oninput = () => calcStockSheet();
+  qtyInp.oninput = () => calcStockSheet(true);
 
   const unit = document.createElement('span');
   unit.textContent = '本';
@@ -1717,7 +1717,7 @@ function addDelivRow(name, qty){
   del.style.cssText = 'cursor:pointer;color:#94a3b8;font-size:12px;padding:2px 5px;border-radius:3px;border:1px solid transparent;';
   del.onmouseover = () => del.style.borderColor = '#ef4444';
   del.onmouseout  = () => del.style.borderColor = 'transparent';
-  del.onclick = () => { wrap.remove(); calcStockSheet(); };
+  del.onclick = () => { wrap.remove(); calcStockSheet(true); };
 
   wrap.appendChild(nameInp);
   wrap.appendChild(qtyInp);
@@ -1726,10 +1726,10 @@ function addDelivRow(name, qty){
   container.appendChild(wrap);
 }
 
-function calcStockSheet(){
+function calcStockSheet(doSave){
   if(!document.getElementById('ssZanmai')) return;
   if(document.getElementById('tab1') && document.getElementById('tab1').style.display === 'none') return;
-  autoSaveStockSheet();
+  if(doSave) autoSaveStockSheet();
   const zanmai  = parseInt(document.getElementById('ssZanmai').value) || 0;
   const yukoIn  = getColSum('ssYukoCells');
   const yukoOut = getColSum('ssYukoOutCells');
