@@ -1635,7 +1635,11 @@ function renderStockTab(){
     delivData.forEach(r => addDelivRow(r.name, r.qty));
   }
 
+  // 自動保存を一時無効化して計算のみ実行
+  const _orig = window.autoSaveStockSheet;
+  window.autoSaveStockSheet = function(){};
   calcStockSheet();
+  window.autoSaveStockSheet = _orig;
 }
 
 // 数値入力行を生成するヘルパー
