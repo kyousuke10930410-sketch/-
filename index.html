@@ -1780,10 +1780,10 @@ function autoSaveStockSheet(){
     kyuyu:   Array.from(document.querySelectorAll('#ssKyuyuCells input')).map(i=>parseInt(i.value)||0),
     delivRows,
   };
-  save();
-  cleanOldStockSheet();
-  // 翌営業日の前残を自動更新
+  // 翌営業日の前残を自動更新（先に実行）
   autoUpdateNextDayZanmai(dateStr);
+  // 古いデータを削除（更新後に実行）
+  cleanOldStockSheet();
   save();
   const msg = document.getElementById('autoSaveMsg');
   if(msg){ msg.style.display='inline'; clearTimeout(msg._t); msg._t=setTimeout(()=>msg.style.display='none',1500); }
