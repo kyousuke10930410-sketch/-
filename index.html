@@ -598,11 +598,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
       <div id="cmNextSetMsg" style="display:none;margin-top:8px;font-size:11px;color:#15803d;"></div>
     </div>
 
-    <!-- 予定チェック -->
-    <div class="frow" style="display:flex;align-items:center;gap:10px;">
-      <label style="margin:0;">このセルを「予定」として記録</label>
-      <input type="checkbox" id="cmScheduled" style="width:auto;transform:scale(1.3);">
-    </div>
+
 
     <div class="mactions">
       <button class="btn" onclick="closeCellModal()">閉じる</button>
@@ -1148,7 +1144,7 @@ function openCell(cid, equipKey, dateStr){
   const recKey = cid + ':' + equipKey + ':' + dateStr;
   const rec = S.deliveries[recKey] || {logs:[], scheduled:false};
 
-  document.getElementById('cmScheduled').checked = rec.scheduled;
+
   renderCmLog(rec);
 
   // 既存の次回予定があれば日付入力に表示
@@ -1287,23 +1283,11 @@ function clearCell(){
 function closeCellModal(){
   if(cellCtx){
     const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
-    const scheduled = document.getElementById('cmScheduled').checked;
     const rec = S.deliveries[recKey];
-    if(!rec && scheduled){
-      S.deliveries[recKey] = {logs:[], scheduled:true};
-    } else if(rec){
+    if(rec){
       const hasNextDate = document.getElementById('cmNextDateInput').value !== '';
-      if(!rec.logs.length && !scheduled && !rec.scheduled && !hasNextDate){
-        // ログも予定もない場合のみ削除
+      if(!rec.logs.length && !rec.scheduled && !hasNextDate){
         delete S.deliveries[recKey];
-      } else if(rec.logs.length === 0 && rec.scheduled && !scheduled){
-        // checkboxはfalseだが、カレンダーで同日予定がセットされている場合はscheduledを維持
-        if(!hasNextDate){
-          rec.scheduled = false;
-        }
-        // hasNextDateがある場合はscheduledをtrueのまま維持
-      } else {
-        rec.scheduled = scheduled;
       }
     }
     save();
