@@ -584,17 +584,60 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
       </div>
     </div>
 
-    <!-- 次回配達予定日（手動設定） -->
+    <!-- 次回配達予定日（カスタムカレンダー） -->
     <div class="frow" style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:12px;">
       <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:8px;">📅 次回配達予定日</div>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
-        <input type="date" id="cmNextDateInput"
-          style="background:#fff;border:1px solid #fca5a5;border-radius:6px;
-          color:#7f1d1d;font-family:inherit;font-size:13px;padding:5px 8px;flex:1;min-width:140px;">
+
+      <!-- 選択済み日付の表示 -->
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div id="cmNextDateDisplay"
+          style="flex:1;background:#fff;border:1px solid #fca5a5;border-radius:6px;
+          color:#7f1d1d;font-size:13px;padding:5px 8px;min-height:32px;cursor:pointer;line-height:1.8;"
+          onclick="toggleCustomCal()">日付を選択 ▼</div>
         <button class="btn sm" style="background:#dc2626;border-color:#dc2626;color:#fff;white-space:nowrap;"
           onclick="cmSetNextDate()">予定をセット</button>
-
       </div>
+
+      <!-- カスタムカレンダー -->
+      <div id="customCalWrap" style="display:none;background:#fff;border:1px solid #fca5a5;border-radius:8px;overflow:hidden;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#334155;">
+          <button onclick="calPrevMonth()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 8px;line-height:1;">‹</button>
+          <span id="calMonthLabel" style="color:#fff;font-weight:700;font-size:13px;"></span>
+          <button onclick="calNextMonth()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 8px;line-height:1;">›</button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(7,1fr);background:#fef2f2;border-bottom:1px solid #fca5a5;">
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#dc2626;font-weight:700;">日</div>
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">月</div>
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">火</div>
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">水</div>
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">木</div>
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">金</div>
+          <div style="text-align:center;font-size:10px;padding:4px 0;color:#0891b2;font-weight:700;">土</div>
+        </div>
+        <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);"></div>
+        <!-- 凡例 -->
+        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:8px 12px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
+            <div style="width:14px;height:14px;border-radius:3px;background:#f97316;"></div>配達済み
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
+            <div style="width:14px;height:14px;border-radius:3px;background:#2563d4;"></div>配達予定
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
+            <div style="width:14px;height:14px;border-radius:3px;background:#eab308;"></div>今日
+          </div>
+          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
+            <div style="width:14px;height:14px;border-radius:3px;background:#16a34a;"></div>選択中
+          </div>
+        </div>
+        <!-- 確定・リセットボタン -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-top:1px solid #fca5a5;background:#fff;">
+          <button onclick="calReset()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:20px;padding:8px 20px;font-size:13px;color:#64748b;cursor:pointer;">リセット</button>
+          <button onclick="calConfirm()" style="background:#2563d4;border:none;border-radius:50%;width:44px;height:44px;font-size:20px;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;">✓</button>
+        </div>
+      </div>
+
+      <input type="hidden" id="cmNextDateInput">
       <div id="cmNextSetMsg" style="display:none;margin-top:8px;font-size:11px;color:#15803d;"></div>
     </div>
 
@@ -1128,6 +1171,145 @@ function cmAddFixed(qty, isTank){
   setTimeout(initDragScroll, 100);
 }
 
+// ═══════════════════════════════════════════
+// カスタムカレンダー
+// ═══════════════════════════════════════════
+let calYear = 0;
+let calMonth = 0;
+let calSelectedDate = '';
+
+function toggleCustomCal(){
+  const wrap = document.getElementById('customCalWrap');
+  if(wrap.style.display === 'none'){
+    // 今月を表示
+    const today = new Date();
+    calYear  = today.getFullYear();
+    calMonth = today.getMonth();
+    // 既に選択済みの日付があればその月を表示
+    if(calSelectedDate){
+      const d = new Date(calSelectedDate + 'T00:00:00');
+      calYear  = d.getFullYear();
+      calMonth = d.getMonth();
+    }
+    renderCal();
+    wrap.style.display = 'block';
+  } else {
+    wrap.style.display = 'none';
+  }
+}
+
+function calPrevMonth(){
+  calMonth--;
+  if(calMonth < 0){ calMonth = 11; calYear--; }
+  renderCal();
+}
+
+function calNextMonth(){
+  calMonth++;
+  if(calMonth > 11){ calMonth = 0; calYear++; }
+  renderCal();
+}
+
+function renderCal(){
+  document.getElementById('calMonthLabel').textContent =
+    calYear + '年' + (calMonth + 1) + '月';
+
+  const grid = document.getElementById('calGrid');
+  grid.innerHTML = '';
+
+  const todStr  = todayStr();
+  const firstDay = new Date(calYear, calMonth, 1).getDay(); // 0=日
+  const daysInMonth = new Date(calYear, calMonth + 1, 0).getDate();
+
+  // 配達済み日・予定日を取得（現在のセルの顧客・設備）
+  const delivDates  = new Set();
+  const schedDates  = new Set();
+  if(cellCtx){
+    const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
+    Object.keys(S.deliveries).forEach(k => {
+      if(!k.startsWith(prefix)) return;
+      const dStr = k.slice(prefix.length);
+      const rec  = S.deliveries[k];
+      if(rec.scheduled) schedDates.add(dStr);
+      else if(rec.logs && rec.logs.length > 0) delivDates.add(dStr);
+    });
+  }
+
+  // 空白セル（月初め）
+  for(let i = 0; i < firstDay; i++){
+    const blank = document.createElement('div');
+    blank.style.cssText = 'background:#fff;padding:6px 0;';
+    grid.appendChild(blank);
+  }
+
+  // 日付セル
+  for(let d = 1; d <= daysInMonth; d++){
+    const dStr = calYear + '-' +
+      String(calMonth + 1).padStart(2, '0') + '-' +
+      String(d).padStart(2, '0');
+    const dow = new Date(calYear, calMonth, d).getDay();
+    const isToday   = dStr === todStr;
+    const isSelected = dStr === calSelectedDate;
+    const isDelivered = delivDates.has(dStr);
+    const isScheduled = schedDates.has(dStr);
+
+    const cell = document.createElement('div');
+    cell.style.cssText = 'text-align:center;padding:6px 0;cursor:pointer;font-size:13px;position:relative;border:1px solid #fef2f2;';
+
+    // 色の優先順位：選択中 > 配達済み > 予定 > 今日 > 通常
+    if(isSelected){
+      cell.style.background = '#16a34a';
+      cell.style.color = '#fff';
+      cell.style.fontWeight = '700';
+      cell.style.borderRadius = '4px';
+    } else if(isDelivered){
+      cell.style.background = '#f97316';
+      cell.style.color = '#fff';
+      cell.style.fontWeight = '700';
+      cell.style.borderRadius = '4px';
+    } else if(isScheduled){
+      cell.style.background = '#2563d4';
+      cell.style.color = '#fff';
+      cell.style.fontWeight = '700';
+      cell.style.borderRadius = '4px';
+    } else if(isToday){
+      cell.style.background = '#eab308';
+      cell.style.color = '#fff';
+      cell.style.fontWeight = '700';
+      cell.style.borderRadius = '4px';
+    } else {
+      cell.style.background = '#fff';
+      cell.style.color = dow === 0 ? '#dc2626' : dow === 6 ? '#0891b2' : '#1e293b';
+    }
+
+    cell.textContent = d;
+    cell.onclick = () => calSelectDate(dStr);
+    grid.appendChild(cell);
+  }
+}
+
+function calSelectDate(dStr){
+  calSelectedDate = dStr;
+  renderCal();
+}
+
+function calConfirm(){
+  if(!calSelectedDate) return;
+  document.getElementById('cmNextDateInput').value = calSelectedDate;
+  const d = new Date(calSelectedDate + 'T00:00:00');
+  document.getElementById('cmNextDateDisplay').textContent =
+    (d.getMonth()+1) + '月' + d.getDate() + '日（' +
+    ['日','月','火','水','木','金','土'][d.getDay()] + '）▼';
+  document.getElementById('customCalWrap').style.display = 'none';
+}
+
+function calReset(){
+  calSelectedDate = '';
+  document.getElementById('cmNextDateInput').value = '';
+  document.getElementById('cmNextDateDisplay').textContent = '日付を選択 ▼';
+  document.getElementById('customCalWrap').style.display = 'none';
+}
+
 function openCell(cid, equipKey, dateStr){
   const c  = S.customers.find(x => x.id === cid);
   const eq = c.equips.find(e => e.key === equipKey);
@@ -1157,11 +1339,26 @@ function openCell(cid, equipKey, dateStr){
   const dateInput = document.getElementById('cmNextDateInput');
   const msg = document.getElementById('cmNextSetMsg');
   msg.style.display = 'none';
-  // 当日自身がscheduledの場合はその日付をセット
+
+  // 次回予定日の値を決定
+  let nextDateVal = '';
   if(rec.scheduled && !existingNext){
-    dateInput.value = dateStr;
+    nextDateVal = dateStr;
   } else {
-    dateInput.value = existingNext ? existingNext.slice(prefix.length) : '';
+    nextDateVal = existingNext ? existingNext.slice(prefix.length) : '';
+  }
+  dateInput.value = nextDateVal;
+
+  // カスタムカレンダーの初期化
+  calSelectedDate = nextDateVal;
+  document.getElementById('customCalWrap').style.display = 'none';
+  const displayEl = document.getElementById('cmNextDateDisplay');
+  if(nextDateVal){
+    const nd = new Date(nextDateVal + 'T00:00:00');
+    displayEl.textContent = (nd.getMonth()+1) + '月' + nd.getDate() + '日（' +
+      ['日','月','火','水','木','金','土'][nd.getDay()] + '）▼';
+  } else {
+    displayEl.textContent = '日付を選択 ▼';
   }
 
   document.getElementById('cellModal').classList.add('open');
@@ -1202,6 +1399,8 @@ function cmClearNextDate(){
   save();
   renderTable();
   document.getElementById('cmNextDateInput').value = '';
+  calSelectedDate = '';
+  document.getElementById('cmNextDateDisplay').textContent = '日付を選択 ▼';
   const msg = document.getElementById('cmNextSetMsg');
   msg.textContent = '🗑 次回予定を削除しました';
   msg.style.display = 'block';
