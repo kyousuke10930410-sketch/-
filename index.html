@@ -5,7 +5,7 @@
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
 <meta http-equiv="Pragma" content="no-cache">
 <meta http-equiv="Expires" content="0">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="🚛灯油配達">
@@ -19,6 +19,18 @@
     document.addEventListener('DOMContentLoaded', function(){
       // タップイベントを正常化
       document.addEventListener('touchstart', function(){}, {passive:true});
+      document.addEventListener('touchmove', function(e){
+        if(e.touches.length > 1){ e.preventDefault(); return false; }
+      }, {passive:false});
+      document.addEventListener('gesturestart', function(e){
+        e.preventDefault(); return false;
+      }, {passive:false});
+      document.addEventListener('gesturechange', function(e){
+        e.preventDefault(); return false;
+      }, {passive:false});
+      document.addEventListener('gestureend', function(e){
+        e.preventDefault(); return false;
+      }, {passive:false});
     });
   }
 })();
@@ -33,38 +45,38 @@
   --green:#16a34a; --red:#dc2626; --yellow:#ca8a04;
   --cyan:#0891b2; --purple:#7c3aed;
   --text:#1e293b; --muted:#64748b; --muted2:#475569;
-  --header-col:120px;
-  --cell-w:70px;
-  --row-h:38px;
+  --header-col:140px;
+  --cell-w:82px;
+  --row-h:50px;
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 body{
   font-family:-apple-system,BlinkMacSystemFont,'Helvetica Neue','Hiragino Sans','Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;
-  background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;
+  background:var(--bg);color:var(--text);min-height:100vh;font-size:17px;
   -webkit-text-size-adjust:100%;
 }
 
 /* ══ TOPBAR ══ */
 .topbar{
   background:var(--s1);border-bottom:1px solid var(--border);
-  display:flex;align-items:center;gap:10px;padding:9px 16px;
+  display:flex;align-items:center;gap:6px;padding:6px 10px;
   position:sticky;top:0;z-index:200;flex-wrap:wrap;
 }
-.logo{font-family:'Courier New',Courier,monospace;font-size:14px;font-weight:700;color:var(--orange);letter-spacing:.05em;white-space:nowrap;}
+.logo{font-family:'Courier New',Courier,monospace;font-size:24px;font-weight:700;color:var(--orange);letter-spacing:.05em;white-space:nowrap;margin-left:8px;}
 .logo span{color:var(--muted);font-weight:400;}
 .sep{flex:1;}
 input.search{
   background:var(--s2);border:1px solid var(--border);border-radius:6px;
-  color:var(--text);font-family:inherit;font-size:12px;padding:5px 10px;width:150px;
+  color:var(--text);font-family:inherit;font-size:16px;padding:4px 8px;width:130px;
 }
 input.search:focus{outline:none;border-color:var(--orange);}
 
 /* ══ BUTTONS ══ */
 .btn{
   display:inline-flex;align-items:center;gap:5px;
-  padding:5px 12px;border-radius:6px;border:1px solid var(--border);
+  padding:7px 14px;border-radius:6px;border:1px solid var(--border);
   background:var(--s2);color:var(--text);cursor:pointer;
-  font-size:12px;font-family:inherit;transition:all .15s;white-space:nowrap;
+  font-size:16px;font-family:inherit;transition:all .15s;white-space:nowrap;
 }
 .btn:hover{background:var(--s3);}
 .btn.accent{background:var(--orange);border-color:var(--orange);color:#fff;}
@@ -74,7 +86,7 @@ input.search:focus{outline:none;border-color:var(--orange);}
 .btn.green{background:var(--green);border-color:var(--green);color:#000;}
 .btn.red{background:rgba(239,68,68,.15);border-color:var(--red);color:var(--red);}
 .btn.red:hover{background:rgba(239,68,68,.3);}
-.btn.sm{padding:3px 8px;font-size:11px;}
+.btn.sm{padding:5px 10px;font-size:14px;}
 
 /* ══ STOCK PANEL ══ */
 .stockbar{
@@ -107,12 +119,12 @@ input.search:focus{outline:none;border-color:var(--orange);}
 
 /* ══ TABS ══ */
 .tabs{
-  display:flex;gap:2px;padding:10px 16px 0;
+  display:flex;gap:2px;padding:6px 10px 0;
   border-bottom:1px solid var(--border);background:var(--s1);
 }
 .tab{
-  padding:6px 16px;border-radius:6px 6px 0 0;cursor:pointer;
-  font-size:12px;color:var(--muted);border:1px solid transparent;
+  padding:8px 12px;border-radius:6px 6px 0 0;cursor:pointer;
+  font-size:19px;color:var(--muted);border:1px solid transparent;
   border-bottom:none;transition:all .15s;
   background:none;font-family:inherit;
   -webkit-appearance:none;
@@ -122,15 +134,15 @@ input.search:focus{outline:none;border-color:var(--orange);}
 
 /* ══ WEEK NAV ══ */
 .weeknav{
-  display:flex;align-items:center;gap:10px;padding:10px 16px;
+  display:flex;align-items:center;gap:6px;padding:6px 10px;
   background:var(--bg);flex-wrap:wrap;
 }
 .weeknav .wlabel{
-  font-family:'Courier New',Courier,monospace;font-size:13px;min-width:220px;text-align:center;
+  font-family:'Courier New',Courier,monospace;font-size:18px;min-width:220px;text-align:center;
 }
 select.wsel{
   background:var(--s2);border:1px solid var(--border);border-radius:6px;
-  color:var(--text);font-family:inherit;font-size:12px;padding:5px 10px;
+  color:var(--text);font-family:inherit;font-size:15px;padding:5px 10px;
 }
 
 /* ══ TABLE ══ */
@@ -150,12 +162,12 @@ table.main th.cname{z-index:20;background:#f1f5f9;}
 
 th.dhdr{
   width:var(--cell-w);min-width:var(--cell-w);text-align:center;
-  padding:5px 3px;background:var(--s2);font-weight:500;font-size:10px;color:var(--muted);
+  padding:3px;background:var(--s2);font-weight:500;font-size:13px;color:var(--muted);
 }
-th.dhdr .dn{display:block;font-family:'Courier New',Courier,monospace;font-size:14px;font-weight:700;color:var(--text);}
+th.dhdr .dn{display:block;font-family:'Courier New',Courier,monospace;font-size:18px;font-weight:700;color:var(--text);}
 /* 当日：オレンジ強調背景 */
 th.dhdr.today{background:#fef08a;border-bottom:3px solid #eab308;}
-th.dhdr.today .dn{color:#854d0e;font-size:17px;}
+th.dhdr.today .dn{color:#854d0e;font-size:20px;}
 /* 祝日：薄赤背景、赤文字 */
 th.dhdr.holiday{background:#fff0f0;}
 th.dhdr.holiday .dn{color:#dc2626;}
@@ -170,7 +182,7 @@ th.dhdr.today.holiday{background:#ffe4e1;}
   color:#b84f00;
   border:2px solid #f97316;
   font-weight:800;
-  font-size:13px;
+  font-size:17px;
   border-radius:6px;
   box-shadow:0 1px 4px rgba(249,115,22,.25);
 }
@@ -197,19 +209,19 @@ th.dhdr.today.holiday{background:#ffe4e1;}
   border-radius:6px;
 }
 td.cname{
-  padding:0 8px;height:var(--row-h);font-size:11px;
+  padding:0 6px;height:var(--row-h);font-size:15px;
   overflow:hidden;text-overflow:ellipsis;cursor:default;
 }
 .cname-inner{display:flex;align-items:center;justify-content:space-between;gap:4px;}
 .cname-text{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 
 tr.subrow td{background:#f8fafc;}
-tr.subrow td.cname{background:#f1f5f9;padding-left:24px;font-size:11px;color:var(--muted2);border-left:3px solid var(--border2);}
+tr.subrow td.cname{background:#f1f5f9;padding-left:16px;font-size:15px;color:var(--muted2);border-left:3px solid var(--border2);}
 
 /* type badges */
 .typebadge{
   display:inline-block;padding:2px 7px;border-radius:4px;
-  font-size:10px;font-family:'Courier New',Courier,monospace;white-space:nowrap;
+  font-size:13px;font-family:'Courier New',Courier,monospace;white-space:nowrap;
   font-weight:700;
 }
 .typebadge.boiler{background:#fff0e0;color:#b84f00;border:1px solid #f97316;}
@@ -226,7 +238,7 @@ td.cell{
 .ci{
   display:flex;align-items:center;justify-content:center;
   width:100%;height:100%;border-radius:4px;
-  font-family:'Courier New',Courier,monospace;font-size:11px;font-weight:600;
+  font-family:'Courier New',Courier,monospace;font-size:15px;font-weight:600;
   transition:all .12s;
 }
 .ci.empty{color:transparent;}
@@ -250,6 +262,7 @@ tr.trow td.cname{color:var(--muted);font-size:10px;text-align:left;font-family:'
 .modal{
   background:var(--s1);border:1px solid var(--border2);border-radius:14px;
   width:460px;max-width:96vw;max-height:90vh;overflow-y:auto;padding:24px;
+  min-height:200px;
 }
 .modal h2{font-size:14px;margin-bottom:16px;color:var(--orange);display:flex;align-items:center;gap:8px;}
 .frow{margin-bottom:12px;}
@@ -260,7 +273,7 @@ tr.trow td.cname{color:var(--muted);font-size:10px;text-align:left;font-family:'
 }
 .frow input:focus,.frow select:focus,.frow textarea:focus{outline:none;border-color:var(--orange);}
 .frow textarea{resize:vertical;min-height:60px;}
-.mactions{display:flex;gap:8px;margin-top:18px;justify-content:flex-end;flex-wrap:wrap;}
+.mactions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end;flex-wrap:wrap;}
 
 /* delivery log in modal */
 .dlog{background:var(--bg);border:1px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden;}
@@ -332,12 +345,12 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
   .tabs { padding: 8px 10px 0; gap: 2px; }
   .tab { padding: 7px 10px; font-size: 11px; }
   .weeknav { padding: 8px 10px; gap: 6px; flex-wrap: wrap; }
-  .wlabel { font-size: 12px; min-width: unset; }
+  .wlabel { font-size: 16px; min-width: unset; }
   .twrap { padding: 0 6px 16px; }
   :root {
-    --header-col: 90px;
-    --cell-w: 62px;
-    --row-h: 40px;
+    --header-col: 110px;
+    --cell-w: 76px;
+    --row-h: 52px;
   }
   /* セルを指で押しやすく */
   td.cell { min-height: 40px; }
@@ -394,12 +407,11 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 <body>
 
 <!-- TOPBAR -->
-<div class="topbar">
-  <div class="logo">🛢 灯油配達管理 <span>v2</span></div>
-  <div class="sep"></div>
-  <input class="search" id="searchBox" placeholder="🔍 顧客名検索" oninput="renderTable()">
-  <button class="btn blue" onclick="openPrintModal()">🖨 予定印刷</button>
-  <button class="btn green" onclick="openExportModal()">💾 データ保存</button>
+<div class="topbar" style="flex-wrap:nowrap;align-items:center;">
+  <div class="logo" style="flex-shrink:0;">灯油配達管理</div>
+  <input class="search" id="searchBox" placeholder="🔍 顧客名検索" oninput="renderTable()" style="flex:1;min-width:0;max-width:180px;">
+  <button class="btn green" style="flex-shrink:0;white-space:nowrap;" onclick="openExportModal()">💾 保存</button>
+  <button class="btn blue" style="flex-shrink:0;white-space:nowrap;" onclick="openPrintModal()">🖨 印刷</button>
 </div>
 
 <!-- TABS -->
@@ -416,7 +428,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
     <div class="wlabel" id="wlabel"></div>
     <button class="btn" onclick="monthOffset++;renderTable()">来月 ▶</button>
 
-    <button class="btn sm" onclick="monthOffset=0;renderTable()">今月</button>
+
   </div>
   <div class="twrap" id="twrap"></div>
 </div>
@@ -425,7 +437,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 <div id="tab1" style="display:none;padding:16px 20px;">
 
   <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px;flex-wrap:wrap;">
-    <h2 style="font-size:15px;font-weight:700;color:var(--text);">📋 在庫管理表</h2>
+    <h2 style="font-size:17px;font-weight:700;color:var(--text);">📋 在庫管理表</h2>
     <input type="hidden" id="stockTabDateInput">
     <div class="sep"></div>
     <span id="autoSaveMsg" style="font-size:11px;color:var(--green);display:none;">✅ 自動保存済み</span>
@@ -564,7 +576,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
           <span style="font-size:11px;color:var(--muted);white-space:nowrap;">その他：</span>
           <input type="number" id="cmAddQty" value="" min="1" max="99" placeholder="本数"
             style="width:70px;background:var(--bg);border:1px solid var(--border);border-radius:5px;
-            color:var(--text);font-family:'Courier New',Courier,monospace;font-size:15px;padding:4px 8px;text-align:center;">
+            color:var(--text);font-family:'Courier New',Courier,monospace;font-size:17px;padding:4px 8px;text-align:center;">
           <span id="cmQtyUnit" style="font-size:12px;color:var(--muted);">本</span>
           <button class="btn sm accent" onclick="cmAddDelivery()">＋ 追加</button>
         </div>
@@ -577,7 +589,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
           <span style="font-size:11px;color:var(--muted);white-space:nowrap;">その他：</span>
           <input type="number" id="cmAddQtyTank" value="" min="10" max="9999" step="10" placeholder="L数"
             style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:5px;
-            color:var(--text);font-family:'Courier New',Courier,monospace;font-size:15px;padding:4px 8px;text-align:center;">
+            color:var(--text);font-family:'Courier New',Courier,monospace;font-size:17px;padding:4px 8px;text-align:center;">
           <span style="font-size:12px;color:var(--muted);">L</span>
           <button class="btn sm blue" onclick="cmAddDelivery()">＋ 追加</button>
         </div>
@@ -585,7 +597,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
     </div>
 
     <!-- 次回配達予定日（カスタムカレンダー） -->
-    <div class="frow" style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:12px;margin-bottom:12px;">
+    <div class="frow" style="background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;padding:10px 12px;margin-bottom:8px;">
       <div style="font-size:11px;font-weight:700;color:#dc2626;margin-bottom:8px;">📅 次回配達予定日</div>
 
       <!-- 選択済み日付の表示（常に表示・タップでカレンダー開閉） -->
@@ -1386,10 +1398,12 @@ function openCell(cid, equipKey, dateStr){
   const _canInput = document.getElementById('cmCanInput');
   const _tankInput = document.getElementById('cmTankInput');
   const _modeBar = document.getElementById('modeCanBtn') ? document.getElementById('modeCanBtn').parentElement : null;
+  const _mactions = document.querySelector('.mactions');
   if(_logArea) _logArea.style.display = '';
   if(_canInput) _canInput.style.display = 'flex';
   if(_tankInput) _tankInput.style.display = 'none';
   if(_modeBar) _modeBar.style.display = 'flex';
+  if(_mactions) _mactions.style.display = 'flex';
   const displayEl = document.getElementById('cmNextDateDisplay');
   if(nextDateVal){
     const nd = new Date(nextDateVal + 'T00:00:00');
@@ -1410,9 +1424,9 @@ function cmSetNextDate(){
 
   const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
 
-  // 既存の次回予定を削除（同じ日も含む）
+  // 既存の予定をすべて削除（日付に関係なく）
   Object.keys(S.deliveries)
-    .filter(k => k.startsWith(prefix) && k.slice(prefix.length) >= cellCtx.dateStr && S.deliveries[k].scheduled)
+    .filter(k => k.startsWith(prefix) && S.deliveries[k].scheduled)
     .forEach(k => delete S.deliveries[k]);
 
   // 新しい予定をセット
