@@ -409,7 +409,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 <!-- TOPBAR -->
 <div class="topbar" style="flex-wrap:nowrap;align-items:center;">
   <div class="logo" style="flex-shrink:0;">灯油配達管理</div>
-  <input class="search" id="searchBox" placeholder="🔍 顧客名検索" oninput="renderTable()" style="flex:1;min-width:0;max-width:180px;">
+  <input class="search" id="searchBox" placeholder="🔍 顧客名検索" oninput="renderTable();renderCustList();" style="flex:1;min-width:0;max-width:180px;">
   <button class="btn green" style="flex-shrink:0;white-space:nowrap;" onclick="openExportModal()">💾 保存</button>
   <button class="btn blue" style="flex-shrink:0;white-space:nowrap;" onclick="openPrintModal()">🖨 印刷</button>
 </div>
@@ -1645,6 +1645,7 @@ function isTanker(equipKey){return equipKey==='tanker';} // 後方互換のた�
 
 function renderCustList(){
   const el=document.getElementById('custList');
+  const search = document.getElementById('searchBox').value.trim().toLowerCase();
   let html=`<table style="border-collapse:collapse;width:100%;font-size:12px;background:#fff;">
     <thead><tr style="background:#f1f5f9;">
       <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:left;color:#334155;">顧客名</th>
@@ -1653,7 +1654,8 @@ function renderCustList(){
       <th style="padding:7px 12px;border:1px solid #cbd5e1;text-align:center;color:#334155;">冬</th>
       <th style="padding:7px 12px;border:1px solid #cbd5e1;color:#334155;"></th>
     </tr></thead><tbody>`;
-  S.customers.forEach((c,i)=>{
+  const filtered = search ? S.customers.filter(c => c.name.toLowerCase().includes(search)) : S.customers;
+  filtered.forEach((c,i)=>{
     const eqs=c.equips.map(e=>`<span class="typebadge ${e.key==='boiler'?'boiler':e.key==='ff'?'ff':e.key==='other'?'other':'poly'}">${e.label}</span>`).join(' ');
     const paceS = c.paceSummer ? c.paceSummer+'日' : '-';
     const paceW = c.paceWinter ? c.paceWinter+'日' : '-';
