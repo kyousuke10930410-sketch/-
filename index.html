@@ -441,7 +441,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
     <input type="hidden" id="stockTabDateInput">
     <div class="sep"></div>
     <span id="autoSaveMsg" style="font-size:11px;color:var(--green);display:none;">✅ 自動保存済み</span>
-    <button class="btn sm blue" onclick="zanmerAwase()">🔄 残合わせ</button>
+    <button class="btn sm blue" id="zanmerBtn" onclick="zanmerAwase()">🔄 残合わせ</button>
   </div>
   <!-- 直近5営業日のクイック選択 -->
   <div id="stockDateBtns" style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px;"></div>
@@ -655,7 +655,7 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 
     <div class="mactions">
       <button class="btn" onclick="closeCellModal()">閉じる</button>
-      <button class="btn red" onclick="clearCell()">この日の記録を削除</button>
+      <button class="btn red" id="clearCellBtn" onclick="clearCell()">この日の記録を削除</button>
     </div>
   </div>
 </div>
@@ -1367,6 +1367,17 @@ function openCell(cid, equipKey, dateStr){
   const recKey = cid + ':' + equipKey + ':' + dateStr;
   const rec = S.deliveries[recKey] || {logs:[], scheduled:false};
 
+  // レコードの状態に応じて削除ボタンの文言を切り替え（誤操作防止）
+  const clearBtn = document.getElementById('clearCellBtn');
+  if(clearBtn){
+    if(rec.logs && rec.logs.length > 0){
+      clearBtn.textContent = 'この日の配達記録を削除';
+    } else if(rec.scheduled){
+      clearBtn.textContent = 'この予定を取り消す';
+    } else {
+      clearBtn.textContent = 'この日の記録を削除';
+    }
+  }
 
   renderCmLog(rec);
 
@@ -1867,6 +1878,16 @@ function renderStockTab(){
   // 保存済みデータを復元
   const saved = S.stockSheet && S.stockSheet[dateStr] ? S.stockSheet[dateStr] : {};
 
+  // 残合わせボタンは「今日」表示中のみ有効（翌営業日以降では無効化）
+  const zanmerBtn = document.getElementById('zanmerBtn');
+  if(zanmerBtn){
+    const isTodayView = dateStr === todayStr();
+    zanmerBtn.disabled = !isTodayView;
+    zanmerBtn.style.opacity = isTodayView ? '1' : '0.4';
+    zanmerBtn.style.cursor = isTodayView ? 'pointer' : 'not-allowed';
+    zanmerBtn.title = isTodayView ? '' : '残合わせは「今日」の画面でのみ実行できます';
+  }
+
   // 前残
   document.getElementById('ssZanmai').value = saved.zanmai ? saved.zanmai : '';
 
@@ -2050,38 +2071,13 @@ function autoSaveStockSheet(){
   if(msg){ msg.style.display='inline'; clearTimeout(msg._t); msg._t=setTimeout(()=>msg.style.display='none',1500); }
 }
 
-
-
-function toggleDelivHistory(){
-  const el = document.getElementById('ssDelivHistory');
-  const isHidden = el.style.display === 'none';
-  if(isHidden){
-    renderDelivHistory();
-    el.style.display = 'block';
-  } else {
-    el.style.display = 'none';
-  }
-}
-
-function renderDelivHistory(){
-  const list = document.getElementById('ssDelivHistoryList');
-  const history = S.delivHistory || [];
-  if(!history.length){
-    list.innerHTML = '<div style="font-size:11px;color:var(--muted);">履歴なし</div>';
+function zanmerAwase(){
+  // 「今日」表示中でなければ残合わせを許可しない
+  const inp = document.getElementById('stockTabDateInput');
+  if(inp.value !== todayStr()){
+    alert('残合わせは「今日」の画面でのみ実行できます。\n実際の日付が変わるまでお待ちください。');
     return;
   }
-  list.innerHTML = history.map(h => {
-    const d = new Date(h.date);
-    const label = (d.getMonth()+1) + '/' + d.getDate();
-    const rows = h.rows.map(r => r.name + ' ' + r.qty + '本').join('、');
-    const total = h.rows.reduce((s,r) => s + r.qty, 0);
-    return '<div style="font-size:11px;background:#fff5f5;border-radius:5px;padding:5px 8px;">' +
-      '合計' + total + '本　' +
-      '<span style="color:var(--muted2);">' + rows + '</span></div>';
-  }).join('');
-}
-
-function zanmerAwase(){
   const yugata = parseInt(document.getElementById('ssYugata').textContent) || 0;
   document.getElementById('zanmerMsg').textContent = '夕方残 ' + yugata + '本 を明日の前残にセットします。よろしいですか？';
   document.getElementById('zanmerModal').classList.add('open');
