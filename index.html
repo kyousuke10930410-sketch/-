@@ -1522,13 +1522,10 @@ function cmRemoveLog(idx){
 
 function clearCell(){
   if(!cellCtx)return;
+  // この日の記録（配達ログ・この日が予定日だった場合のscheduledフラグ）のみ削除
+  // 別の日にセットされている次回配達予定日には影響を与えない
   const recKey=`${cellCtx.cid}:${cellCtx.equipKey}:${cellCtx.dateStr}`;
   delete S.deliveries[recKey];
-  // 次回配達予定日も削除
-  const prefix = cellCtx.cid + ':' + cellCtx.equipKey + ':';
-  Object.keys(S.deliveries)
-    .filter(k => k.startsWith(prefix) && S.deliveries[k].scheduled)
-    .forEach(k => delete S.deliveries[k]);
   // カスタムカレンダーもリセット
   calSelectedDate = '';
   document.getElementById('cmNextDateInput').value = '';
