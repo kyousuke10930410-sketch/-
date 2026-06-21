@@ -225,7 +225,7 @@ tr.subrow td.cname{background:#f1f5f9;padding-left:16px;font-size:15px;color:var
   font-weight:700;
 }
 .typebadge.boiler{background:#fff0e0;color:#b84f00;border:1px solid #f97316;}
-.typebadge.ff{background:#e8f0ff;color:#1d4fb8;border:1px solid #3b82f6;}
+.typebadge.ff{background:#e8f0ff;color:#1d4fb8;border:1px solid #3b82f6;font-size:15px;}
 .typebadge.poly{background:#e6f9ee;color:#15803d;border:1px solid #22c55e;}
 .typebadge.other{background:#f1f5f9;color:#334155;border:1px solid #64748b;}
 .ci.tanker-sched{background:rgba(8,145,178,.08);color:var(--cyan);border:1px dashed rgba(8,145,178,.4);}
@@ -828,8 +828,21 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 // ═══════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════
+const EQUIP_OPTIONS=[
+  {key:'boiler',label:'ボイラー'},
+  {key:'ff',label:'FF式ストーブ'},
+  {key:'poly',label:'ポリ容器'},
+  {key:'other',label:'その他'},
+];
 let S = loadState();
 let nextCid = S.customers.length ? Math.max(...S.customers.map(c=>c.id))+1 : 1;
+
+// 配達管理表・顧客一覧での表示用に設備ラベルを短縮する
+// （データ自体は正式名称「FF式ストーブ」のまま保持し、表示のみ「FF式」にする）
+function shortEquipLabel(label){
+  if(label === 'FF式ストーブ') return 'FF式';
+  return label;
+}
 let weekOffset = 0; // 後方互換のため残す（未使用）
 let monthOffset = 0;
 
@@ -841,13 +854,13 @@ function defaultState(){
   return {
     customers:[
       {id:1,name:'田中 一郎',  equips:[{key:'boiler',label:'ボイラー',interval:14}]},
-      {id:2,name:'佐藤 花子',  equips:[{key:'ff',label:'FF式',interval:10},{key:'poly',label:'ポリ容器',interval:7,winter:true}]},
+      {id:2,name:'佐藤 花子',  equips:[{key:'ff',label:'FF式ストーブ',interval:10},{key:'poly',label:'ポリ容器',interval:7,winter:true}]},
       {id:3,name:'鈴木 次郎',  equips:[{key:'poly',label:'ポリ容器',interval:7}]},
       {id:4,name:'高橋 美咲',  equips:[{key:'boiler',label:'ボイラー',interval:21}]},
-      {id:5,name:'渡辺 健太',  equips:[{key:'ff',label:'FF式',interval:14}]},
+      {id:5,name:'渡辺 健太',  equips:[{key:'ff',label:'FF式ストーブ',interval:14}]},
       {id:6,name:'伊藤 さくら',equips:[{key:'boiler',label:'ボイラー',interval:14},{key:'poly',label:'ポリ容器',interval:7,winter:true}]},
       {id:7,name:'山本 浩二',  equips:[{key:'boiler',label:'ボイラー',interval:14}]},
-      {id:8,name:'中村 陽子',  equips:[{key:'ff',label:'FF式',interval:10}]},
+      {id:8,name:'中村 陽子',  equips:[{key:'ff',label:'FF式ストーブ',interval:10}]},
     ],
     deliveries:{},
     stockOps:{},
@@ -858,6 +871,7 @@ function loadState(){
     const s=JSON.parse(localStorage.getItem('kero_v3'));
     if(s&&s.customers){
       migratePaceToEquip(s);
+      migrateEquipLabels(s);
       return s;
     }
   }catch(e){}
@@ -874,6 +888,18 @@ function migratePaceToEquip(s){
       }
       if(eq.paceWinter === undefined){
         eq.paceWinter = hasOldPace ? (c.paceWinter !== undefined ? c.paceWinter : null) : null;
+      }
+    });
+  });
+}
+// 既存データ移行：設備ラベルの表記をEQUIP_OPTIONSの正式名称に統一（例：「FF式」→「FF式ストーブ」）
+function migrateEquipLabels(s){
+  s.customers.forEach(c=>{
+    if(!c.equips) return;
+    c.equips.forEach(eq=>{
+      const opt = EQUIP_OPTIONS.find(o=>o.key===eq.key);
+      if(opt && eq.label !== opt.label){
+        eq.label = opt.label;
       }
     });
   });
@@ -904,6 +930,8 @@ function pd(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
 function isWeekend(d){const dw=d.getDay();return dw===0||dw===6;}
 function isHoliday(d){return HOLIDAYS.has(ds(d));}
 function isBiz(d){return !isWeekend(d)&&!isHoliday(d);}
+// 在庫管理表専用：土日のみ休業日とし、祝日は営業日として扱う
+function isStockBiz(d){return !isWeekend(d);}
 function addBizDays(start,n){
   let t=new Date(start);t.setDate(t.getDate()+n);
   while(!isBiz(t))t.setDate(t.getDate()+1);
@@ -927,6 +955,12 @@ function nowTime(){const d=new Date();return d.getHours().toString().padStart(2,
 // STOCK CALCULATIONS
 // ═══════════════════════════════════════════
 function todayStr(){return ds(new Date());}
+// 在庫管理表の「今日」基準：土日のみ休業日とし、祝日は営業日として扱う
+function bizTodayStr(){
+  const d = new Date();
+  while(!isStockBiz(d)) d.setDate(d.getDate() - 1);
+  return ds(d);
+}
 function calcStock(dateStr){
   dateStr=dateStr||todayStr();
   const ops=S.stockOps[dateStr]||[];
@@ -1006,7 +1040,7 @@ function renderTable(){
           <div class="cname-inner">
             <span class="cname-text">${isFirst ? c.name : ''}</span>
             <span class="typebadge ${badgeClass}">
-              ${eq.label}
+              ${shortEquipLabel(eq.label)}
             </span>
           </div>
         </td>`;
@@ -1341,7 +1375,7 @@ function openCell(cid, equipKey, dateStr){
   const eq = c.equips.find(e => e.key === equipKey);
   cellCtx = {cid, equipKey, dateStr};
 
-  document.getElementById('cmTitle').textContent = '🛢 ' + c.name + ' — ' + eq.label + ' — ' + dateStr;
+  document.getElementById('cmTitle').textContent = '🛢 ' + c.name + ' — ' + shortEquipLabel(eq.label) + ' — ' + dateStr;
 
   setDeliveryMode('can');
 
@@ -1628,12 +1662,6 @@ function closeStockLog(){document.getElementById('stockLogModal').classList.remo
 // CUSTOMER MANAGEMENT
 // ═══════════════════════════════════════════
 let editingCid=null;
-const EQUIP_OPTIONS=[
-  {key:'boiler',label:'ボイラー'},
-  {key:'ff',label:'FF式ストーブ'},
-  {key:'poly',label:'ポリ容器'},
-  {key:'other',label:'その他'},
-];
 function isTanker(equipKey){return equipKey==='tanker';} // 後方互換のため残す
 
 function renderCustList(){
@@ -1641,8 +1669,8 @@ function renderCustList(){
   const search = document.getElementById('searchBox').value.trim().toLowerCase();
   let html=`<table style="border-collapse:collapse;width:100%;table-layout:fixed;font-size:14px;background:#fff;">
     <colgroup>
-      <col style="width:24%">
       <col style="width:28%">
+      <col style="width:24%">
       <col style="width:13%">
       <col style="width:13%">
       <col style="width:22%">
@@ -1669,7 +1697,7 @@ function renderCustList(){
       return;
     }
     c.equips.forEach((e, idx)=>{
-      const badge = `<span class="typebadge ${e.key==='boiler'?'boiler':e.key==='ff'?'ff':e.key==='other'?'other':'poly'}" style="font-size:11px;padding:3px 6px;">${e.label}</span>`;
+      const badge = `<span class="typebadge ${e.key==='boiler'?'boiler':e.key==='ff'?'ff':e.key==='other'?'other':'poly'}" style="font-size:11px;padding:3px 6px;">${shortEquipLabel(e.label)}</span>`;
       const fmtPace = (v) => (v === 'none') ? '−' : (v ? v+'日' : '−');
       const paceS = fmtPace(e.paceSummer);
       const paceW = fmtPace(e.paceWinter);
@@ -1741,11 +1769,11 @@ function paceSelectHTML(season, eqIdx, currentVal){
 
   return `
     <select class="eqpace eqpace-${season}" data-eqidx="${eqIdx}" onchange="onEqPaceChange(this)"
-      style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:15px;padding:7px 8px;flex:1;min-width:140px;">
+      style="background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:15px;padding:7px 8px;flex:1;min-width:140px;box-sizing:border-box;">
       ${opts.map(o=>`<option value="${o.v}" ${selVal===o.v?'selected':''}>${o.t}</option>`).join('')}
     </select>
     <input type="number" class="eqpace-days" min="1" max="365" placeholder="日数" value="${customVal}"
-      style="width:68px;display:${isCustom?'inline-block':'none'};background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:15px;padding:7px 8px;text-align:center;">`;
+      style="width:68px;display:${isCustom?'inline-block':'none'};background:var(--bg);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:inherit;font-size:15px;padding:7px 8px;text-align:center;box-sizing:border-box;flex-shrink:0;">`;
 }
 
 function onEqPaceChange(sel){
@@ -1769,11 +1797,11 @@ function addEquipRow(eq){
       <span class="rm" onclick="this.closest('.ce-eq-row').remove()" style="font-size:16px;">✕</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;width:100%;">
-      <span style="font-size:16px;font-weight:700;color:var(--blue);min-width:38px;">❄️ 冬：</span>
+      <span style="font-size:16px;font-weight:700;color:var(--blue);min-width:62px;flex-shrink:0;white-space:nowrap;">❄️ 冬：</span>
       ${paceSelectHTML('winter', idx, eq ? (eq.paceWinter !== undefined ? eq.paceWinter : null) : null)}
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;width:100%;">
-      <span style="font-size:14px;font-weight:500;color:var(--orange);min-width:38px;">☀️ 夏：</span>
+      <span style="font-size:16px;font-weight:700;color:var(--orange);min-width:62px;flex-shrink:0;white-space:nowrap;">☀️ 夏：</span>
       ${paceSelectHTML('summer', idx, eq ? (eq.paceSummer !== undefined ? eq.paceSummer : null) : null)}
     </div>`;
   ce.appendChild(row);
@@ -1859,8 +1887,8 @@ function switchTab(n){
 
 function renderStockTab(){
   const inp = document.getElementById('stockTabDateInput');
-  // 値がなければ今日の日付をセット
-  if(!inp.value) inp.value = todayStr();
+  // 値がなければ直近営業日の日付をセット（土日の場合は金曜日扱い）
+  if(!inp.value) inp.value = bizTodayStr();
   const dateStr = inp.value;
   const d = new Date(dateStr + 'T00:00:00');
 
@@ -1869,26 +1897,29 @@ function renderStockTab(){
   if(btnContainer){
     btnContainer.innerHTML = '';
     const today = new Date();
+    // 直近営業日（土日なら遡って金曜などにする。祝日は営業日扱い）を「今日」として扱う
+    const bizToday = new Date(today);
+    while(!isStockBiz(bizToday)) bizToday.setDate(bizToday.getDate() - 1);
     const bizDays = [];
 
-    // 今日を含む過去4営業日
-    let td = new Date(today);
+    // 直近営業日を含む過去4営業日
+    let td = new Date(bizToday);
     while(bizDays.length < 4){
-      if(isBiz(td)) bizDays.push(new Date(td));
+      if(isStockBiz(td)) bizDays.push(new Date(td));
       td.setDate(td.getDate() - 1);
     }
     bizDays.reverse();
 
     // 翌営業日を追加
-    const nextD = new Date(today);
+    const nextD = new Date(bizToday);
     nextD.setDate(nextD.getDate() + 1);
-    while(!isBiz(nextD)) nextD.setDate(nextD.getDate() + 1);
+    while(!isStockBiz(nextD)) nextD.setDate(nextD.getDate() + 1);
     bizDays.push(new Date(nextD));
 
     bizDays.forEach(bd => {
       const dstr = ds(bd);
       const isSelected = dstr === dateStr;
-      const isToday = dstr === todayStr();
+      const isToday = dstr === bizTodayStr();
       const hasData = S.stockSheet && S.stockSheet[dstr] && S.stockSheet[dstr].zanmai !== undefined;
       const btn = document.createElement('button');
       btn.className = 'btn sm' + (isSelected ? ' accent' : '');
@@ -1906,10 +1937,10 @@ function renderStockTab(){
   // 保存済みデータを復元
   const saved = S.stockSheet && S.stockSheet[dateStr] ? S.stockSheet[dateStr] : {};
 
-  // 残合わせボタンは「今日」表示中のみ有効（翌営業日以降では無効化）
+  // 残合わせボタンは「直近の営業日」表示中のみ有効（翌営業日以降では無効化）
   const zanmerBtn = document.getElementById('zanmerBtn');
   if(zanmerBtn){
-    const isTodayView = dateStr === todayStr();
+    const isTodayView = dateStr === bizTodayStr();
     zanmerBtn.disabled = !isTodayView;
     zanmerBtn.style.opacity = isTodayView ? '1' : '0.4';
     zanmerBtn.style.cursor = isTodayView ? 'pointer' : 'not-allowed';
@@ -2050,21 +2081,24 @@ function calcStockSheet(doSave){
 
 function cleanOldStockSheet(){
   if(!S.stockSheet) return;
-  // 今日＋過去3営業日＋翌営業日のみ保持
+  // 直近営業日＋過去3営業日＋翌営業日のみ保持（renderStockTabと同じ基準に統一）
   const today = new Date();
+  // 直近営業日（土日なら遡る。祝日は営業日扱い）
+  const bizToday = new Date(today);
+  while(!isStockBiz(bizToday)) bizToday.setDate(bizToday.getDate() - 1);
   const keepDays = [];
 
-  // 今日を含む過去4営業日（今日＋過去3日）を取得
-  let d = new Date(today);
+  // 直近営業日を含む過去4営業日（直近営業日＋過去3日）を取得
+  let d = new Date(bizToday);
   while(keepDays.length < 4){
-    if(isBiz(d)) keepDays.push(ds(d));
+    if(isStockBiz(d)) keepDays.push(ds(d));
     d.setDate(d.getDate() - 1);
   }
 
-  // 翌営業日も保持
-  const tomorrow = new Date(today);
+  // 翌営業日も保持（直近営業日から+1）
+  const tomorrow = new Date(bizToday);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  while(!isBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
+  while(!isStockBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
   keepDays.push(ds(tomorrow));
 
   // 保持リスト以外を削除
@@ -2078,7 +2112,7 @@ function autoSaveStockSheet(){
   if(!document.getElementById('ssZanmai')) return;
   if(document.getElementById('tab1').style.display === 'none') return;
   const inp = document.getElementById('stockTabDateInput');
-  const dateStr = inp && inp.value ? inp.value : todayStr();
+  const dateStr = inp && inp.value ? inp.value : bizTodayStr();
   if(!S.stockSheet) S.stockSheet = {};
   const delivWraps = document.querySelectorAll('#ssDelivList > div');
   const delivRows = Array.from(delivWraps).map(wrap => {
@@ -2100,10 +2134,10 @@ function autoSaveStockSheet(){
 }
 
 function zanmerAwase(){
-  // 「今日」表示中でなければ残合わせを許可しない
+  // 「直近の営業日」表示中でなければ残合わせを許可しない
   const inp = document.getElementById('stockTabDateInput');
-  if(inp.value !== todayStr()){
-    alert('残合わせは「今日」の画面でのみ実行できます。\n実際の日付が変わるまでお待ちください。');
+  if(inp.value !== bizTodayStr()){
+    alert('残合わせは「直近の営業日」の画面でのみ実行できます。\n実際の日付が変わるまでお待ちください。');
     return;
   }
   const yugata = parseInt(document.getElementById('ssYugata').textContent) || 0;
@@ -2117,11 +2151,10 @@ function execZanmerAwase(){
 
   // 表示中の日付を使う
   const inp = document.getElementById('stockTabDateInput');
-  const dateStr = inp && inp.value ? inp.value : todayStr();
+  const dateStr = inp && inp.value ? inp.value : bizTodayStr();
 
   if(!S.stockSheet) S.stockSheet = {};
 
-  // 配達リストを履歴に保存（最大5回分）
   const delivWraps = document.querySelectorAll('#ssDelivList > div');
   const delivRows = Array.from(delivWraps).map(wrap => {
     const inputs = wrap.querySelectorAll('input');
@@ -2133,11 +2166,11 @@ function execZanmerAwase(){
     if(S.delivHistory.length > 5) S.delivHistory = S.delivHistory.slice(0, 5);
   }
 
-  // 翌営業日を計算
+  // 翌営業日を計算（祝日は営業日扱い、土日のみスキップ）
   const baseDate = new Date(dateStr + 'T00:00:00');
   const tomorrow = new Date(baseDate);
   tomorrow.setDate(tomorrow.getDate() + 1);
-  while(!isBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
+  while(!isStockBiz(tomorrow)) tomorrow.setDate(tomorrow.getDate() + 1);
   const tomorrowStr = ds(tomorrow);
 
   // 翌営業日の前残にyugataをセット
