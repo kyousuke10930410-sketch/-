@@ -610,34 +610,37 @@ a, button, .btn, .tab, .op-btn, .sopt, .cell {
 
       <!-- カスタムカレンダー -->
       <div id="customCalWrap" style="display:none;background:#fff;border:1px solid #fca5a5;border-radius:8px;overflow:hidden;margin-bottom:8px;">
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:#334155;">
-          <button onclick="calPrevMonth()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 8px;line-height:1;">‹</button>
-          <span id="calMonthLabel" style="color:#fff;font-weight:700;font-size:13px;"></span>
-          <button onclick="calNextMonth()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:0 8px;line-height:1;">›</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#334155;">
+          <button onclick="calPrevMonth()" style="background:none;border:none;color:#fff;font-size:26px;cursor:pointer;padding:0 10px;line-height:1;">‹</button>
+          <span id="calMonthLabel" style="color:#fff;font-weight:700;font-size:17px;"></span>
+          <button onclick="calNextMonth()" style="background:none;border:none;color:#fff;font-size:26px;cursor:pointer;padding:0 10px;line-height:1;">›</button>
         </div>
         <div style="display:grid;grid-template-columns:repeat(7,1fr);background:#fef2f2;border-bottom:1px solid #fca5a5;">
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#dc2626;font-weight:700;">日</div>
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">月</div>
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">火</div>
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">水</div>
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">木</div>
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#64748b;">金</div>
-          <div style="text-align:center;font-size:10px;padding:4px 0;color:#0891b2;font-weight:700;">土</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#dc2626;font-weight:700;">日</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#64748b;">月</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#64748b;">火</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#64748b;">水</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#64748b;">木</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#64748b;">金</div>
+          <div style="text-align:center;font-size:13px;padding:7px 0;color:#0891b2;font-weight:700;">土</div>
         </div>
         <div id="calGrid" style="display:grid;grid-template-columns:repeat(7,1fr);"></div>
         <!-- 凡例 -->
-        <div style="display:flex;gap:10px;flex-wrap:wrap;padding:8px 12px;background:#f8fafc;border-top:1px solid #e2e8f0;">
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
-            <div style="width:14px;height:14px;border-radius:3px;background:#f97316;"></div>配達済み
+        <div style="display:flex;gap:14px;flex-wrap:wrap;padding:12px 14px;background:#f8fafc;border-top:1px solid #e2e8f0;">
+          <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:#475569;">
+            <div style="width:18px;height:18px;border-radius:4px;background:#f97316;"></div>配達済み
           </div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
-            <div style="width:14px;height:14px;border-radius:3px;background:#2563d4;"></div>配達予定
+          <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:#475569;">
+            <div style="width:18px;height:18px;border-radius:4px;background:#2563d4;"></div>配達予定
           </div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
-            <div style="width:14px;height:14px;border-radius:3px;border:2px solid #eab308;"></div>今日
+          <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:#475569;">
+            <div style="width:18px;height:18px;border-radius:4px;border:2px solid #eab308;"></div>今日
           </div>
-          <div style="display:flex;align-items:center;gap:4px;font-size:10px;color:#475569;">
-            <div style="width:14px;height:14px;border-radius:3px;background:#16a34a;"></div>選択中
+          <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:#475569;">
+            <div style="width:18px;height:18px;border-radius:4px;background:#16a34a;"></div>選択中
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;font-size:14px;color:#9333ea;">
+            <span style="font-weight:700;">紫字</span>＝祝日(営業)
           </div>
         </div>
         <!-- 確定・リセットボタン -->
@@ -929,9 +932,15 @@ function ds(d){
 function pd(s){const[y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d);}
 function isWeekend(d){const dw=d.getDay();return dw===0||dw===6;}
 function isHoliday(d){return HOLIDAYS.has(ds(d));}
+// 会社独自の特別休業日（夏季休暇・年末年始）。土日祝とは別に、平日でも休業になる日。
+const COMPANY_CLOSED=new Set([
+  '2025-12-31','2026-01-01','2026-01-02','2026-01-03', // 年末年始
+  '2026-08-14','2026-08-15','2026-08-16', // 夏季休暇
+]);
+function isCompanyClosed(d){return COMPANY_CLOSED.has(ds(d));}
 function isBiz(d){return !isWeekend(d)&&!isHoliday(d);}
-// 在庫管理表専用：土日のみ休業日とし、祝日は営業日として扱う
-function isStockBiz(d){return !isWeekend(d);}
+// 在庫管理表専用：土日のみ休業日とし、祝日は営業日として扱う。ただし会社独自の特別休業日は休業。
+function isStockBiz(d){return !isWeekend(d)&&!isCompanyClosed(d);}
 function addBizDays(start,n){
   let t=new Date(start);t.setDate(t.getDate()+n);
   while(!isBiz(t))t.setDate(t.getDate()+1);
@@ -946,8 +955,8 @@ function getMonthDates(offset, mode){
   const mon  = base.getMonth();
   const daysInMonth = new Date(year, mon+1, 0).getDate();
   const all = Array.from({length: daysInMonth}, (_, i) => new Date(year, mon, i+1));
-  // 土日のみ除外、祝日は表示する
-  return mode === 'biz' ? all.filter(d => !isWeekend(d)) : all;
+  // 土日と会社独自の休業日（年末年始・夏季休暇）を除外、祝日は表示する
+  return mode === 'biz' ? all.filter(d => !isWeekend(d) && !isCompanyClosed(d)) : all;
 }
 function nowTime(){const d=new Date();return d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0');}
 
@@ -994,10 +1003,10 @@ function updateStockBar(){
 function renderTable(){
   const mode = 'biz'; // 平日のみ固定
   const dates = getMonthDates(monthOffset, mode);
-  // 今日が土日・祝日なら直近の平日を「今日」として扱う
+  // 今日が土日・会社独自の休業日なら直近の営業日を「今日」として扱う（祝日は営業日なので遡らない）
   const realToday = new Date();
   let highlightDay = new Date(realToday);
-  while(!isBiz(highlightDay)) highlightDay.setDate(highlightDay.getDate() - 1);
+  while(isWeekend(highlightDay) || isCompanyClosed(highlightDay)) highlightDay.setDate(highlightDay.getDate() - 1);
   const todStr = ds(highlightDay);
   const search = document.getElementById('searchBox').value.trim().toLowerCase();
 
@@ -1287,7 +1296,7 @@ function renderCal(){
   // 空白セル（月初め）
   for(let i = 0; i < firstDay; i++){
     const blank = document.createElement('div');
-    blank.style.cssText = 'background:#fff;padding:6px 0;';
+    blank.style.cssText = 'background:#fff;padding:11px 0;';
     grid.appendChild(blank);
   }
 
@@ -1296,16 +1305,23 @@ function renderCal(){
     const dStr = calYear + '-' +
       String(calMonth + 1).padStart(2, '0') + '-' +
       String(d).padStart(2, '0');
-    const dow = new Date(calYear, calMonth, d).getDay();
+    const dateObj = new Date(calYear, calMonth, d);
+    const dow = dateObj.getDay();
     const isToday   = dStr === todStr;
     const isSelected = dStr === calSelectedDate;
     const isDelivered = delivDates.has(dStr);
     const isScheduled = schedDates.has(dStr);
+    // 休業日（土日・年末年始・夏季休暇）か祝日（営業）かを判定
+    const isOff = isWeekend(dateObj) || isCompanyClosed(dateObj);
+    const isHol = isHoliday(dateObj) && !isOff;
 
     const cell = document.createElement('div');
-    cell.style.cssText = 'text-align:center;padding:6px 0;cursor:pointer;font-size:13px;position:relative;border:1px solid #fef2f2;';
+    cell.style.cssText = 'text-align:center;padding:11px 0;cursor:pointer;font-size:18px;position:relative;border:1px solid #fef2f2;';
 
     // 色の優先順位：選択中 > 配達済み > 予定 > 今日 > 通常
+    // 通常時の文字色：休業日=赤、祝日=紫、それ以外は通常色
+    const normalColor = isOff ? '#dc2626' : isHol ? '#9333ea' : '#1e293b';
+
     if(isSelected){
       cell.style.background = '#16a34a';
       cell.style.color = '#fff';
@@ -1313,23 +1329,23 @@ function renderCal(){
       cell.style.borderRadius = '4px';
     } else if(isDelivered){
       cell.style.background = '#f97316';
-      cell.style.color = '#fff';
+      cell.style.color = isHol ? '#9333ea' : '#fff';
       cell.style.fontWeight = '700';
       cell.style.borderRadius = '4px';
     } else if(isScheduled){
       cell.style.background = '#2563d4';
-      cell.style.color = '#fff';
+      cell.style.color = isHol ? '#9333ea' : '#fff';
       cell.style.fontWeight = '700';
       cell.style.borderRadius = '4px';
     } else if(isToday){
       cell.style.background = '#fff';
-      cell.style.color = '#1e293b';
+      cell.style.color = normalColor;
       cell.style.fontWeight = '700';
       cell.style.borderRadius = '4px';
       cell.style.border = '2px solid #eab308';
     } else {
       cell.style.background = '#fff';
-      cell.style.color = dow === 0 ? '#dc2626' : dow === 6 ? '#0891b2' : '#1e293b';
+      cell.style.color = normalColor;
     }
 
     cell.textContent = d;
